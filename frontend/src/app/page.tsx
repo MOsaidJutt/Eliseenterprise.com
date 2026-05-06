@@ -36,9 +36,12 @@ export default function UploadPage() {
 
   const handleLogoClick = useCallback(() => {
     clickCountRef.current += 1;
-    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
-    clickTimerRef.current = setTimeout(() => { clickCountRef.current = 0; }, 600);
+    if (clickCountRef.current === 1) {
+      // Start the window on the first click
+      clickTimerRef.current = setTimeout(() => { clickCountRef.current = 0; }, 1500);
+    }
     if (clickCountRef.current >= 3) {
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
       clickCountRef.current = 0;
       openAdmin();
     }
