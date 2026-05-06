@@ -1,0 +1,84 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+:root {
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+  --card: #FFFFFF;
+  --border: #E2E8F0;
+  --muted: #64748B;
+  --accent: #1E293B;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #F1F5F9;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Recharts */
+.recharts-tooltip-wrapper { outline: none; }
+.recharts-default-tooltip {
+  border-radius: 8px !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
+}
+
+/* Print styles */
+@media print {
+  @page { size: A3 landscape; margin: 1.5cm; }
+
+  .no-print { display: none !important; }
+  body { background: white !important; }
+  .print-break { page-break-before: always; }
+
+  /* Remove max-width constraints so everything fills the page */
+  .max-w-screen-xl,
+  .max-w-screen-lg,
+  .max-w-screen-md { max-width: 100% !important; width: 100% !important; }
+
+  /* Prevent sections from splitting across pages */
+  section { break-inside: avoid; page-break-inside: avoid; }
+
+  /* Remove overflow clipping so charts and tables aren't cut off */
+  .overflow-hidden { overflow: visible !important; }
+  .overflow-x-auto { overflow: visible !important; }
+  .overflow-y-auto { overflow: visible !important; }
+
+  /* Remove max-height so all table rows are visible */
+  [class*="max-h-"] { max-height: none !important; }
+
+  /* Recharts — force re-fill after overflow unlock */
+  .recharts-responsive-container { width: 100% !important; }
+  .recharts-wrapper,
+  .recharts-surface { overflow: visible !important; }
+
+  /* Sticky headers don't work on print — make them static */
+  .sticky { position: static !important; }
+}

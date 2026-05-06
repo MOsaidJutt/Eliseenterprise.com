@@ -1,0 +1,69 @@
+"use client";
+import { FloatErosionRow } from "@/lib/api";
+
+function ErosionMeter({ pct }: { pct: number }) {
+  const color = pct > 70 ? "bg-red-500" : pct > 40 ? "bg-amber-400" : "bg-emerald-500";
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden w-20">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+      </div>
+      <span className={`text-xs font-bold ${pct > 70 ? "text-red-600" : pct > 40 ? "text-amber-600" : "text-emerald-600"}`}>
+        {pct}%
+      </span>
+    </div>
+  );
+}
+
+export default function FloatErosion({ data }: { data: FloatErosionRow[] }) {
+  if (data.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-slate-100">
+          <h3 className="text-sm font-bold text-slate-800">Float Erosion</h3>
+          <p className="text-xs text-slate-400 mt-0.5">Total float consumed across snapshots</p>
+        </div>
+        <div className="p-10 text-center">
+          <p className="text-xs text-slate-400">Upload 2+ XER snapshots to compute float erosion.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="px-6 py-4 border-b border-slate-100">
+        <h3 className="text-sm font-bold text-slate-800">Float Erosion</h3>
+        <p className="text-xs text-slate-400 mt-0.5">Total float consumed across schedule snapshots</p>
+      </div>
+      <div className="p-6 space-y-4">
+        {data.map((row, i) => (
+          <div key={i} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <p className="text-xs font-semibold text-slate-700">
+                  {row.previous_dd} → {row.current_dd}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{row.total_compared.toLocaleString()} activities compared</p>
+              </div>
+              <span className={`text-sm font-bold ${row.eroded_float_days < -100 ? "text-red-600" : row.eroded_float_days < 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                {row.eroded_float_days.toLocaleString()}d
+              </span>
+            </div>
+            <ErosionMeter pct={row.pct_eroded} />
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div className="bg-white rounded-lg p-2.5 border border-slate-100">
+                <p className="text-[10px] text-slate-400 mb-0.5">Float Eroded</p>
+                <p className="text-sm font-bold text-red-600">{row.eroded_activities.toLocaleString()} activities</p>
+              </div>
+              <div className="bg-white rounded-lg p-2.5 border border-slate-100">
+                <p className="text-[10px] text-slate-400 mb-0.5">Float Gained</p>
+                <p className="text-sm font-bold text-emerald-600">{row.increased_activities.toLocaleString()} activities</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
