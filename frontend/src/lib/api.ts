@@ -25,7 +25,21 @@ export async function logoutUser(): Promise<void> {
   }).catch(() => {});
 }
 
-export async function fetchAdminStats(): Promise<{ files_processed: number; active_sessions: number }> {
+export interface AnalysisLogEntry {
+  id: number;
+  timestamp: string;
+  project: string;
+  files: string[];
+  file_count: number;
+}
+
+export interface AdminStats {
+  files_processed: number;
+  active_sessions: number;
+  log: AnalysisLogEntry[];
+}
+
+export async function fetchAdminStats(): Promise<AdminStats> {
   const res = await fetch(`${API_BASE}/api/admin/stats`, {
     headers: { ...authHeader() },
   });

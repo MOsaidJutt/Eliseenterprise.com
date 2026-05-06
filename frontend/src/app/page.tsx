@@ -2,7 +2,7 @@
 
 import { useState, DragEvent, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { analyzeXerFiles, fetchAdminStats } from "@/lib/api";
+import { analyzeXerFiles, fetchAdminStats, AdminStats } from "@/lib/api";
 import { isLoggedIn, clearToken } from "@/lib/auth";
 
 const FEATURES = [
@@ -20,7 +20,7 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [adminOpen, setAdminOpen] = useState(false);
-  const [adminStats, setAdminStats] = useState<{ files_processed: number; active_sessions: number } | null>(null);
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
   const [adminLoading, setAdminLoading] = useState(false);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -117,13 +117,17 @@ export default function UploadPage() {
 
       {/* ── Admin Panel Modal ────────────────────────────────────── */}
       {adminOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-sm mx-4 overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+
             {/* Header */}
-            <div className="bg-slate-900 px-6 py-4 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="bg-slate-900 px-6 py-4 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
                 <div className="w-2 h-2 rounded-full bg-emerald-400" />
                 <span className="text-white text-sm font-semibold">Admin Panel</span>
+                {adminStats && (
+                  <span className="text-white/40 text-xs">· {adminStats.files_processed} analyses total</span>
+                )}
               </div>
               <button onClick={() => setAdminOpen(false)} className="text-white/60 hover:text-white transition-colors">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -131,30 +135,66 @@ export default function UploadPage() {
                 </svg>
               </button>
             </div>
-            {/* Content */}
-            <div className="p-6">
+
+            {/* Stats row */}
+            {adminStats && (
+              <div className="grid grid-cols-2 gap-3 px-6 py-4 border-b border-slate-100 shrink-0">
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 text-center">
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mb-1">Total Analyses</p>
+                  <p className="text-3xl font-bold text-slate-900">{adminStats.files_processed}</p>
+                </div>
+                <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100 text-center">
+                  <p className="text-[10px] text-emerald-600 font-semibold uppercase tracking-wider mb-1">Active Sessions</p>
+                  <p className="text-3xl font-bold text-emerald-700">{adminStats.active_sessions}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Log table */}
+            <div className="flex-1 overflow-y-auto">
               {adminLoading ? (
-                <div className="flex items-center justify-center py-8">
+                <div className="flex items-center justify-center py-12">
                   <div className="w-6 h-6 border-2 border-slate-800 border-t-transparent rounded-full animate-spin" />
                 </div>
-              ) : adminStats ? (
-                <div className="space-y-4">
-                  <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 text-center">
-                    <p className="text-xs text-slate-400 font-medium uppercase tracking-wider mb-1">Files Processed</p>
-                    <p className="text-4xl font-bold text-slate-900">{adminStats.files_processed.toLocaleString()}</p>
-                    <p className="text-xs text-slate-400 mt-1">XER analyses completed</p>
-                  </div>
-                  <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 text-center">
-                    <p className="text-xs text-emerald-600 font-medium uppercase tracking-wider mb-1">Active Sessions</p>
-                    <p className="text-3xl font-bold text-emerald-700">{adminStats.active_sessions}</p>
-                  </div>
-                </div>
+              ) : !adminStats ? (
+                <p className="text-sm text-slate-400 text-center py-10">Could not load stats.</p>
+              ) : adminStats.log.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-10">No analyses run yet.</p>
               ) : (
-                <p className="text-sm text-slate-400 text-center py-6">Could not load stats.</p>
+                <table className="w-full text-xs">
+                  <thead className="sticky top-0 bg-slate-50 border-b border-slate-100">
+                    <tr>
+                      <th className="text-left px-5 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider w-8">#</th>
+                      <th className="text-left px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">When</th>
+                      <th className="text-left px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Project</th>
+                      <th className="text-left px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Files</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adminStats.log.map((entry, i) => (
+                      <tr key={entry.id} className={i % 2 === 0 ? "bg-white" : "bg-slate-50/50"}>
+                        <td className="px-5 py-3 text-slate-300 font-mono">{entry.id}</td>
+                        <td className="px-4 py-3 text-slate-500 font-mono whitespace-nowrap">{entry.timestamp}</td>
+                        <td className="px-4 py-3 text-slate-700 font-medium max-w-[160px] truncate">{entry.project}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            {entry.files.map((f, fi) => (
+                              <span key={fi} className="inline-block bg-slate-100 text-slate-600 font-mono text-[10px] px-2 py-0.5 rounded truncate max-w-[200px]">{f}</span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 shrink-0">
               <button
                 onClick={handleLogout}
-                className="mt-6 w-full flex items-center justify-center gap-2 text-xs text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 py-2 rounded-xl transition-colors"
+                className="w-full flex items-center justify-center gap-2 text-xs text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 py-2 rounded-xl transition-colors"
               >
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
