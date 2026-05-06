@@ -1,6 +1,6 @@
 import { authHeader } from "./auth";
 
-const API_BASE = "/backend";
+const API_BASE = "";
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 

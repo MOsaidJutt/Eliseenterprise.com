@@ -6,6 +6,8 @@ from typing import List
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from xer_parser import parse_xer
@@ -114,3 +116,26 @@ async def analyze(request: Request, files: List[UploadFile] = File(...)):
     result = compute_all(xers)
     _increment_count()
     return result
+
+
+# ── Serve built Next.js frontend (must be LAST) ──────────────────────────────
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+
+if os.path.isdir(STATIC_DIR):
+    # Serve Next.js static assets (_next/static/...)
+    _next_dir = os.path.join(STATIC_DIR, "_next")
+    if os.path.isdir(_next_dir):
+        app.mount("/_next", StaticFiles(directory=_next_dir), name="next-assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        # Exact file (e.g. favicon.ico, images)
+        candidate = os.path.join(STATIC_DIR, full_path)
+        if os.path.isfile(candidate):
+            return FileResponse(candidate)
+        # Directory index (e.g. /login/ → login/index.html)
+        index = os.path.join(STATIC_DIR, full_path.strip("/"), "index.html")
+        if os.path.isfile(index):
+            return FileResponse(index)
+        # Root fallback
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
