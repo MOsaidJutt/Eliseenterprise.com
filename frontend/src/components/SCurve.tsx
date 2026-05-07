@@ -106,10 +106,16 @@ export default function SCurve({ data }: { data: SCurveData }) {
             <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 10, fill: "#94A3B8" }}
+              tick={{ fontSize: 9, fill: "#94A3B8" }}
               axisLine={false} tickLine={false}
-              interval="preserveStartEnd" minTickGap={40}
-              angle={-35} textAnchor="end" height={48}
+              interval={0}
+              angle={-45} textAnchor="end" height={56}
+              tickFormatter={(val: string) => {
+                if (!val) return "";
+                const [y, m] = val.split("-");
+                const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][parseInt(m) - 1] ?? m;
+                return `${mon} '${String(y).slice(2)}`;
+              }}
             />
             <YAxis
               tickFormatter={(v) => `${v}%`}
