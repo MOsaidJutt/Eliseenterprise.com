@@ -39,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-white text-gray-900 antialiased">
         <PWARegister />
-        {children}
+        <div id="__page_root">{children}</div>
       </body>
     </html>
   );

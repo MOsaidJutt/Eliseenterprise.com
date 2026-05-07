@@ -195,7 +195,7 @@ export default function DashboardPage() {
 
           {/* Report header card */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm mb-6 overflow-hidden">
-            <div className="px-6 md:px-8 py-6 flex items-start justify-between gap-6">
+            <div className="px-6 md:px-8 py-6 flex flex-col sm:flex-row items-start justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Programme Health Report</span>

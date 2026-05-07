@@ -126,7 +126,7 @@ export default function MilestoneTracker({ data }: { data: Milestone[] }) {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto overflow-y-auto max-h-[520px] print:overflow-visible print:max-h-none">
+      <div className="overflow-x-auto [-webkit-overflow-scrolling:touch] overflow-y-auto max-h-[520px] print:overflow-visible print:max-h-none">
         <table className="w-full min-w-[640px] text-xs">
           <thead className="sticky top-0 bg-white border-b border-slate-100 z-10">
             <tr>

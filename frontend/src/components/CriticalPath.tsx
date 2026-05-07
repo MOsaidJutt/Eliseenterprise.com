@@ -107,7 +107,7 @@ export default function CriticalPath({ data }: { data: CriticalActivity[] }) {
       </div>
 
       {/* Table */}
-      <div className={`overflow-x-auto print:overflow-visible ${showTable ? "" : "hidden print:block"}`}>
+      <div className={`overflow-x-auto [-webkit-overflow-scrolling:touch] print:overflow-visible ${showTable ? "" : "hidden print:block"}`}>
         <table className="w-full min-w-[640px] text-xs">
           <thead className="border-b border-slate-100">
             <tr className="bg-slate-50/50">
