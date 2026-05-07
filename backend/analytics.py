@@ -284,12 +284,14 @@ def compute_scurve(xer: XerData) -> dict:
         for i, v in enumerate(spread_pct(t_start, t_end, weight)):
             bl_weekly[i] += v
 
-        # Actual series: up to data date
         act_s = _parse_date(t.get("act_start_date", ""))
         act_e = _parse_date(t.get("act_end_date", ""))
         status = t.get("status_code", "")
         pct = float(t.get("phys_complete_pct", 0) or 0) / 100
+        e_start = _parse_date(t.get("early_start_date", "") or t.get("restart_date", ""))
+        e_end = _parse_date(t.get("early_end_date", "") or t.get("reend_date", ""))
 
+        # Actual series: up to data date
         if status == "TK_Complete" and act_s and act_e:
             for i, v in enumerate(spread_pct(act_s, act_e, weight)):
                 act_weekly[i] += v
@@ -298,10 +300,22 @@ def compute_scurve(xer: XerData) -> dict:
             for i, v in enumerate(spread_pct(act_s, partial_end, weight * pct)):
                 act_weekly[i] += v
 
-        # Forecast series: early dates
-        e_start = _parse_date(t.get("early_start_date", "") or t.get("restart_date", ""))
-        e_end = _parse_date(t.get("early_end_date", "") or t.get("reend_date", ""))
-        if status not in ("TK_Complete",):
+        # Forecast series: blend of actual (done) + projected (remaining)
+        # Complete → use actual dates (same as actual series)
+        # Active  → actual start→data date for done %, then data date→early end for remaining %
+        # Not started → early dates for full weight
+        if status == "TK_Complete" and act_s and act_e:
+            for i, v in enumerate(spread_pct(act_s, act_e, weight)):
+                fc_weekly[i] += v
+        elif status == "TK_Active" and act_s and data_date:
+            partial_end = min(data_date, act_e or data_date)
+            for i, v in enumerate(spread_pct(act_s, partial_end, weight * pct)):
+                fc_weekly[i] += v
+            fc_end = e_end or t_end
+            if fc_end and fc_end > data_date:
+                for i, v in enumerate(spread_pct(data_date, fc_end, weight * (1 - pct))):
+                    fc_weekly[i] += v
+        else:
             for i, v in enumerate(spread_pct(e_start or t_start, e_end or t_end, weight)):
                 fc_weekly[i] += v
 
