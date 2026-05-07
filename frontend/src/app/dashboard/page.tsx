@@ -13,9 +13,11 @@ import FloatErosion from "@/components/FloatErosion";
 import MilestoneTracker from "@/components/MilestoneTracker";
 import CriticalPath from "@/components/CriticalPath";
 import ObservationsPanel from "@/components/ObservationsPanel";
+import ExecutiveSummary from "@/components/ExecutiveSummary";
 
 const NAV = [
-  { id: "kpi",          label: "KPI Summary",          icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
+  { id: "executive",    label: "Executive Summary",     icon: "M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" },
+  { id: "kpi",          label: "KPI Summary",           icon: "M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" },
   { id: "observations", label: "Observations",          icon: "M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
   { id: "scurve",       label: "S-Curve",               icon: "M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" },
   { id: "performance",  label: "Schedule Performance",  icon: "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" },
@@ -228,11 +230,15 @@ export default function DashboardPage() {
           {/* Sections */}
           <div className="space-y-6">
 
-            <Section id="kpi" label="Key Performance Indicators">
+            <Section id="executive" label="Executive Summary">
+              <ExecutiveSummary result={result} />
+            </Section>
+
+            <Section id="kpi" label="Key Performance Indicators" risk={kpis.spi < 0.85 ? "high" : kpis.spi < 0.95 ? "medium" : "low"}>
               <KPISummary kpis={kpis} />
             </Section>
 
-            <Section id="observations" label="Observations & Risk">
+            <Section id="observations" label="Observations & Risk" risk={observations.length > 3 ? "high" : observations.length > 1 ? "medium" : "low"}>
               <ObservationsPanel observations={observations} />
             </Section>
 
@@ -240,25 +246,25 @@ export default function DashboardPage() {
               <SCurve data={scurve} />
             </Section>
 
-            <Section id="performance" label="Schedule Performance">
+            <Section id="performance" label="Schedule Performance" risk={spi_by_contractor.some(c => c.spi < 0.80) ? "high" : spi_by_contractor.some(c => c.spi < 0.95) ? "medium" : "low"}>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <SPIByContractor data={spi_by_contractor} />
                 <PPCTable data={ppc} />
               </div>
             </Section>
 
-            <Section id="resources" label="Resources & Float">
+            <Section id="resources" label="Resources & Float" risk={float_erosion.some(f => f.pct_eroded > 70) ? "high" : float_erosion.some(f => f.pct_eroded > 40) ? "medium" : "low"}>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <ResourceHistogram data={resources} />
                 <FloatErosion data={float_erosion} />
               </div>
             </Section>
 
-            <Section id="milestones" label="Milestone Tracker">
+            <Section id="milestones" label="Milestone Tracker" risk={milestones.filter(m => m.variance_days < 0).length > 5 ? "high" : milestones.filter(m => m.variance_days < 0).length > 0 ? "medium" : "low"}>
               <MilestoneTracker data={milestones} />
             </Section>
 
-            <Section id="critical" label="Critical Path Activities">
+            <Section id="critical" label="Critical Path Activities" risk={kpis.neg_float_activities > 50 ? "high" : kpis.neg_float_activities > 10 ? "medium" : "low"}>
               <CriticalPath data={critical_path} />
             </Section>
 
@@ -280,12 +286,25 @@ export default function DashboardPage() {
   );
 }
 
-function Section({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
+const RISK_FLAG = {
+  high:   { dot: "bg-red-500",     text: "text-red-500",   label: "High Risk" },
+  medium: { dot: "bg-amber-400",   text: "text-amber-500", label: "At Risk" },
+  low:    { dot: "bg-emerald-500", text: "text-emerald-600",label: "On Track" },
+};
+
+function Section({ id, label, risk, children }: { id: string; label: string; risk?: "high" | "medium" | "low"; children: React.ReactNode }) {
+  const rf = risk ? RISK_FLAG[risk] : null;
   return (
     <section id={id} className="scroll-mt-20">
       <div className="flex items-center gap-3 mb-3">
         <div className="w-0.5 h-4 bg-slate-800 rounded-full" />
         <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.12em]">{label}</h2>
+        {rf && (
+          <span className={`flex items-center gap-1 text-[10px] font-bold ${rf.text}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${rf.dot}`} />
+            {rf.label}
+          </span>
+        )}
       </div>
       {children}
     </section>

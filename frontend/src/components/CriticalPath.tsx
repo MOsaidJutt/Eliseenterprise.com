@@ -33,7 +33,13 @@ function ProgressBar({ pct }: { pct: number }) {
 
 export default function CriticalPath({ data }: { data: CriticalActivity[] }) {
   const [showAll, setShowAll] = useState(false);
+  const [showTable, setShowTable] = useState(false);
   const displayed = showAll ? data : data.slice(0, 20);
+
+  const severeNeg = data.filter(a => a.total_float_days < -10).length;
+  const mildNeg   = data.filter(a => a.total_float_days >= -10 && a.total_float_days < 0).length;
+  const zeroFloat = data.filter(a => a.total_float_days === 0).length;
+  const top5 = [...data].sort((a, b) => a.total_float_days - b.total_float_days).slice(0, 5);
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -49,8 +55,59 @@ export default function CriticalPath({ data }: { data: CriticalActivity[] }) {
         </div>
       </div>
 
+      {/* Risk distribution */}
+      <div className="grid grid-cols-3 gap-0 border-b border-slate-100">
+        <div className="px-5 py-3 border-r border-slate-100 text-center">
+          <p className="text-[10px] font-bold text-red-400 uppercase tracking-wider mb-0.5">Severe (&lt; −10d)</p>
+          <p className="text-xl font-bold text-red-600">{severeNeg}</p>
+        </div>
+        <div className="px-5 py-3 border-r border-slate-100 text-center">
+          <p className="text-[10px] font-bold text-amber-500 uppercase tracking-wider mb-0.5">At Risk (−1 to −10d)</p>
+          <p className="text-xl font-bold text-amber-600">{mildNeg}</p>
+        </div>
+        <div className="px-5 py-3 text-center">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Zero Float</p>
+          <p className="text-xl font-bold text-slate-700">{zeroFloat}</p>
+        </div>
+      </div>
+
+      {/* Top 5 highest risk */}
+      {top5.length > 0 && (
+        <div className="px-6 py-4 border-b border-slate-100">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Top {top5.length} Highest Risk Activities</p>
+          <div className="space-y-2">
+            {top5.map((a, i) => (
+              <div key={i} className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-2.5">
+                <span className={`text-[10px] font-bold w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${
+                  a.total_float_days < -10 ? "bg-red-100 text-red-700" : "bg-amber-50 text-amber-700"
+                }`}>{i + 1}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-slate-700 truncate">{a.task_name}</p>
+                  <p className="text-[10px] text-slate-400 font-mono">{a.task_code} · {STATUS_LABEL[a.status] || a.status}</p>
+                </div>
+                <FloatBadge days={a.total_float_days} />
+                <ProgressBar pct={parseFloat(a.pct_complete)} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Toggle full table */}
+      <div className="px-6 py-3 border-b border-slate-100 bg-slate-50/50">
+        <button
+          onClick={() => setShowTable(!showTable)}
+          className="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1.5 transition-colors"
+        >
+          <svg className={`w-3.5 h-3.5 transition-transform ${showTable ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+          {showTable ? "Hide" : "Show"} full activity table ({data.length} activities)
+        </button>
+      </div>
+
       {/* Table */}
-      <div className="overflow-x-auto print:overflow-visible">
+      <div className={`overflow-x-auto print:overflow-visible ${showTable ? "" : "hidden print:block"}`}>
         <table className="w-full min-w-[640px] text-xs">
           <thead className="border-b border-slate-100">
             <tr className="bg-slate-50/50">

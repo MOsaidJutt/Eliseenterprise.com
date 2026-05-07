@@ -52,8 +52,36 @@ export default function MilestoneTracker({ data }: { data: Milestone[] }) {
     { key: "forecast", label: "Forecast" },
   ];
 
+  const worstDelay = data.filter(m => m.variance_days < 0).sort((a, b) => a.variance_days - b.variance_days)[0];
+  const earlyCount = data.filter(m => m.actual !== "" && m.variance_days > 0).length;
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+
+      {/* Summary metric cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 border-b border-slate-100">
+        <div className="px-5 py-4 border-r border-slate-100">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total</p>
+          <p className="text-2xl font-bold text-slate-800">{data.length}</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">milestones</p>
+        </div>
+        <div className="px-5 py-4 border-r border-slate-100">
+          <p className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-1">Delayed</p>
+          <p className="text-2xl font-bold text-red-600">{counts.delayed}</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">{worstDelay ? `worst: ${Math.abs(worstDelay.variance_days)}d late` : "none"}</p>
+        </div>
+        <div className="px-5 py-4 border-r border-slate-100">
+          <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Achieved</p>
+          <p className="text-2xl font-bold text-emerald-600">{counts.hit}</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">{earlyCount > 0 ? `${earlyCount} early` : "on or late"}</p>
+        </div>
+        <div className="px-5 py-4">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Forecast</p>
+          <p className="text-2xl font-bold text-slate-700">{counts.forecast}</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">pending completion</p>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="px-6 py-4 border-b border-slate-100">
         <div className="flex items-start justify-between gap-4 flex-wrap">
