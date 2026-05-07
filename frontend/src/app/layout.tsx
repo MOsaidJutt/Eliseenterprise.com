@@ -21,6 +21,7 @@ export const viewport: Viewport = {
   themeColor: "#0F172A",
   width: "device-width",
   initialScale: 1,
+  minimumScale: 0.25,
   maximumScale: 5,
   userScalable: true,
 };
@@ -39,7 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="bg-white text-gray-900 antialiased">
         <PWARegister />
-        <div id="__page_root">{children}</div>
+        {children}
       </body>
     </html>
   );
