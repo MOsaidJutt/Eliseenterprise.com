@@ -39,13 +39,12 @@ export default function SCurve({ data }: { data: SCurveData }) {
   const windowStart = subtractMonths(ddStr, 12);
   const chartData = allPoints.filter(p => p.label >= windowStart);
 
-  // Thin but ALWAYS keep the data date point
-  const step = Math.max(1, Math.floor(chartData.length / 18));
+  // One point per month — deduplicate by label, always keep data date
   const seen = new Set<string>();
-  const thinned = chartData.filter((p, i) => {
+  const thinned = chartData.filter((p) => {
     if (seen.has(p.label)) return false;
     seen.add(p.label);
-    return i % step === 0 || p.label === ddStr;
+    return true;
   });
 
   // Auto Y-axis: start just below the minimum visible value
