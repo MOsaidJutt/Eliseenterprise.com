@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head><title>Generate PWA Icons</title></head>
+<body>
+<p>Click the buttons below to download the app icons, then place them in the <code>public/</code> folder.</p>
+<canvas id="c" style="border:1px solid #ccc;margin:10px"></canvas>
+<br>
+<button onclick="gen(192,'icon-192.png')">Download icon-192.png</button>
+<button onclick="gen(512,'icon-512.png')">Download icon-512.png</button>
+<button onclick="gen(512,'icon-maskable.png')">Download icon-maskable.png</button>
+<button onclick="genApple()">Download apple-touch-icon.png</button>
+<script>
+function draw(size, padding) {
+  const c = document.getElementById('c');
+  c.width = size; c.height = size;
+  const ctx = c.getContext('2d');
+  const r = size * 0.12;
+  // Background
+  ctx.fillStyle = '#0F172A';
+  ctx.beginPath();
+  ctx.roundRect(0, 0, size, size, r);
+  ctx.fill();
+  // White square icon
+  const sq = size * 0.35;
+  const sx = (size - sq) / 2;
+  const sy = (size - sq) / 2;
+  ctx.fillStyle = 'rgba(255,255,255,0.12)';
+  ctx.beginPath();
+  ctx.roundRect(sx, sy, sq, sq, size * 0.06);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+  ctx.lineWidth = size * 0.01;
+  ctx.beginPath();
+  ctx.roundRect(sx, sy, sq, sq, size * 0.06);
+  ctx.stroke();
+  // P6 text
+  ctx.fillStyle = '#FFFFFF';
+  ctx.font = `bold ${size * 0.18}px -apple-system, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('P6', size / 2, size / 2);
+}
+function gen(size, filename) {
+  draw(size, 0);
+  const a = document.createElement('a');
+  a.href = document.getElementById('c').toDataURL('image/png');
+  a.download = filename;
+  a.click();
+}
+function genApple() {
+  draw(180, 0);
+  const a = document.createElement('a');
+  a.href = document.getElementById('c').toDataURL('image/png');
+  a.download = 'apple-touch-icon.png';
+  a.click();
+}
+draw(192, 0);
+</script>
+</body>
+</html>
