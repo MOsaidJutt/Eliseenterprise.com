@@ -89,21 +89,19 @@ export default function SCurve({ data }: { data: SCurveData }) {
             <Tooltip content={<CustomTooltip />} />
             <Legend wrapperStyle={{ fontSize: 11, paddingTop: 16 }} formatter={(v) => <span style={{ color: "#64748B" }}>{v}</span>} />
 
-            {/* Data date vertical line */}
+            <Area   type="monotone" dataKey="Baseline" stroke="#1E293B" strokeWidth={2}   fill="url(#baselineGrad)" dot={false} />
+            <Line   type="monotone" dataKey="Actual"   stroke="#475569" strokeWidth={2.5} dot={false} strokeDasharray="6 3" />
+            <Line   type="monotone" dataKey="Forecast" stroke="#94A3B8" strokeWidth={1.5} dot={false} strokeDasharray="3 4" />
+
+            {/* Data date line — rendered last so it appears on top */}
             {ddStr && ddInData && (
               <ReferenceLine
                 x={ddStr}
                 stroke="#2563EB"
                 strokeWidth={2}
-                strokeDasharray="0"
-                isFront={true}
                 label={{ value: "◀ Data Date", position: "insideTopRight", fontSize: 10, fill: "#2563EB", fontWeight: 700 }}
               />
             )}
-
-            <Area   type="monotone" dataKey="Baseline" stroke="#1E293B" strokeWidth={2}   fill="url(#baselineGrad)" dot={false} />
-            <Line   type="monotone" dataKey="Actual"   stroke="#475569" strokeWidth={2.5} dot={false} strokeDasharray="6 3" />
-            <Line   type="monotone" dataKey="Forecast" stroke="#94A3B8" strokeWidth={1.5} dot={false} strokeDasharray="3 4" />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
