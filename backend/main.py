@@ -29,12 +29,8 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "Elise@2024!")
 # ── In-memory session store ───────────────────────────────────────────────────
 active_sessions: set = set()
 
-# ── Persistent analysis log ───────────────────────────────────────────────────
-# DATA_DIR is set to a Railway Volume mount path (e.g. /data) in production.
-# Falls back to the app directory for local dev.
-DATA_DIR = os.getenv("DATA_DIR", os.path.dirname(__file__))
-os.makedirs(DATA_DIR, exist_ok=True)
-LOG_FILE = os.path.join(DATA_DIR, "counter.json")
+# ── Persistent analysis log (counter.json) ────────────────────────────────────
+LOG_FILE = os.path.join(os.path.dirname(__file__), "counter.json")
 
 def _read_log() -> dict:
     try:
