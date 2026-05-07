@@ -16,11 +16,6 @@ function toYM(raw: string): string {
   return `${y}-${String(m).padStart(2, "0")}`;
 }
 
-function subtractMonths(yyyyMM: string, n: number): string {
-  const [y, m] = yyyyMM.split("-").map(Number);
-  const d = new Date(y, m - 1 - n, 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
 
 export default function SCurve({ data }: { data: SCurveData }) {
   const ddStr = toYM(data.data_date ?? "");
@@ -32,9 +27,8 @@ export default function SCurve({ data }: { data: SCurveData }) {
     Forecast: (data.forecast[i] ?? 0) > 0 ? data.forecast[i] : null,
   }));
 
-  // Window: 6 months before data date → full project end
-  const windowStart = ddStr ? subtractMonths(ddStr, 6) : (allPoints[0]?.label ?? "");
-  const chartData   = allPoints.filter(p => p.label >= windowStart);
+  // Show full project timeline — no trimming
+  const chartData = allPoints;
 
   // Thin but ALWAYS keep the data date point
   const step = Math.max(1, Math.floor(chartData.length / 18));
