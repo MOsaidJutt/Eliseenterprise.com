@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0F172A",
+  themeColor: "#070C18",
   width: "device-width",
   initialScale: 1,
   minimumScale: 0.25,
@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
       </head>
-      <body className="bg-white text-gray-900 antialiased">
+      <body className="bg-[#070C18] text-slate-200 antialiased">
         <PWARegister />
         {children}
       </body>

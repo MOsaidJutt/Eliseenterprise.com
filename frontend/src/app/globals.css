@@ -1,88 +1,103 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #F8FAFC;
-  --foreground: #0F172A;
-  --card: #FFFFFF;
-  --border: #E2E8F0;
-  --muted: #64748B;
-  --accent: #1E293B;
+  --bg-app:    #070C18;
+  --bg-card:   #0D1829;
+  --bg-card2:  #0F1E35;
+  --bg-raised: #162038;
+  --border:    rgba(148, 163, 184, 0.08);
+  --border-md: rgba(148, 163, 184, 0.12);
+  --border-accent: rgba(59, 130, 246, 0.25);
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html {
   scroll-behavior: smooth;
-  /* Safe on iOS: clips document-level horizontal overflow
-     without creating a sub-scroll-container the way body does */
   overflow-x: hidden;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg-app);
+  color: #CBD5E1;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   width: 100%;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-::-webkit-scrollbar-track {
-  background: #F1F5F9;
-}
-::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 99px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+/* Subtle dot-grid overlay — renders behind all content */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(148,163,184,0.045) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  z-index: -1;
 }
 
-/* Recharts */
+/* ── Glass card ──────────────────────────────────────── */
+.glass-card {
+  background: rgba(13, 24, 41, 0.82);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(148, 163, 184, 0.08);
+  box-shadow: 0 4px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* ── Glow helpers ────────────────────────────────────── */
+.glow-blue    { box-shadow: 0 0 24px rgba(59,130,246,0.18); }
+.glow-emerald { box-shadow: 0 0 24px rgba(16,185,129,0.18); }
+.glow-red     { box-shadow: 0 0 24px rgba(239,68,68,0.18);  }
+.glow-amber   { box-shadow: 0 0 24px rgba(245,158,11,0.18); }
+
+/* ── Scrollbar ───────────────────────────────────────── */
+::-webkit-scrollbar       { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.25); }
+::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.35); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.55); }
+
+/* ── Recharts dark overrides ─────────────────────────── */
 .recharts-tooltip-wrapper { outline: none; }
 .recharts-default-tooltip {
-  border-radius: 8px !important;
-  border: 1px solid #E2E8F0 !important;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08) !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(148,163,184,0.12) !important;
+  background: rgba(10,18,33,0.97) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45) !important;
+  color: #CBD5E1 !important;
 }
 
-/* Print styles */
+/* ── Print ───────────────────────────────────────────── */
 @media print {
   @page { size: A3 landscape; margin: 1.5cm; }
 
   .no-print { display: none !important; }
-  body { background: white !important; }
+
+  body {
+    background: white !important;
+    color: #0f172a !important;
+  }
+  body::before { display: none !important; }
+
   .print-break { page-break-before: always; }
 
-  /* Remove max-width constraints so everything fills the page */
   .max-w-screen-xl,
   .max-w-screen-lg,
   .max-w-screen-md { max-width: 100% !important; width: 100% !important; }
 
-  /* Prevent sections from splitting across pages */
   section { break-inside: avoid; page-break-inside: avoid; }
 
-  /* Remove overflow clipping so charts and tables aren't cut off */
   .overflow-hidden { overflow: visible !important; }
   .overflow-x-auto { overflow: visible !important; }
   .overflow-y-auto { overflow: visible !important; }
 
-  /* Remove max-height so all table rows are visible */
   [class*="max-h-"] { max-height: none !important; }
 
-  /* Recharts — force re-fill after overflow unlock */
   .recharts-responsive-container { width: 100% !important; }
   .recharts-wrapper,
   .recharts-surface { overflow: visible !important; }
 
-  /* Sticky headers don't work on print — make them static */
   .sticky { position: static !important; }
 }

@@ -1,5 +1,6 @@
 """
-Analytics engine: computes all 8 dashboard sections from parsed XER data.
+Analytics engine: computes all dashboard sections from parsed XER data.
+Phase 2 adds compute_gantt for the WBS Gantt chart view.
 """
 
 from datetime import datetime, timedelta
@@ -20,6 +21,10 @@ def _parse_date(s: str) -> datetime | None:
 
 def _fmt(d: datetime | None) -> str:
     return d.strftime("%d-%b-%y") if d else ""
+
+
+def _fmt_iso(d: datetime | None) -> str:
+    return d.strftime("%Y-%m-%d") if d else ""
 
 
 def _week_start(d: datetime) -> datetime:
@@ -535,6 +540,86 @@ def compute_observations(kpis: dict, ppc_rows: list, float_erosion: list) -> lis
     return obs
 
 
+# ── 9. Gantt Chart ───────────────────────────────────────────────────────────
+
+def compute_gantt(xer: XerData) -> dict:
+    """Returns task data structured for the collapsible WBS Gantt chart (max 300 tasks)."""
+    wbs_map = {w["wbs_id"]: w for w in xer.wbs}
+
+    def _wbs_info(wbs_id: str) -> tuple[str, str, int]:
+        w = wbs_map.get(wbs_id, {})
+        name = w.get("wbs_name", "")
+        short = w.get("wbs_short_name", wbs_id)
+        # Count depth by walking parent chain
+        level = 0
+        pid = wbs_id
+        visited = set()
+        while pid and pid in wbs_map and pid not in visited:
+            visited.add(pid)
+            parent = wbs_map[pid].get("parent_wbs_id", "")
+            if not parent or parent == pid:
+                break
+            pid = parent
+            level += 1
+        return short, name, min(level, 6)
+
+    tasks = [t for t in xer.tasks if t.get("task_type") not in ("TT_LOE", "TT_WBS")]
+    tasks.sort(key=lambda t: (
+        t.get("wbs_id", ""),
+        t.get("early_start_date", "") or t.get("target_start_date", "") or "",
+    ))
+
+    all_dates = []
+    rows = []
+    for t in tasks[:300]:
+        wbs_id = t.get("wbs_id", "")
+        wbs_path, wbs_name, wbs_level = _wbs_info(wbs_id)
+
+        ps = _parse_date(t.get("target_start_date", ""))
+        pf = _parse_date(t.get("target_end_date", ""))
+        as_ = _parse_date(t.get("act_start_date", ""))
+        af = _parse_date(t.get("act_end_date", ""))
+        es = _parse_date(t.get("early_start_date", "") or t.get("restart_date", ""))
+        ef = _parse_date(t.get("early_end_date", "") or t.get("reend_date", ""))
+
+        for d in [ps, pf, as_, af, es, ef]:
+            if d:
+                all_dates.append(d)
+
+        dur = float(t.get("target_drtn_hr_cnt", 0) or 0) / 8
+
+        rows.append({
+            "id": t.get("task_id", ""),
+            "code": t.get("task_code", ""),
+            "name": t.get("task_name", ""),
+            "wbs_id": wbs_id,
+            "wbs_name": wbs_name,
+            "wbs_path": wbs_path,
+            "wbs_level": wbs_level,
+            "planned_start": _fmt_iso(ps),
+            "planned_finish": _fmt_iso(pf),
+            "actual_start": _fmt_iso(as_),
+            "actual_finish": _fmt_iso(af),
+            "early_start": _fmt_iso(es),
+            "early_finish": _fmt_iso(ef),
+            "status": t.get("status_code", ""),
+            "pct_complete": float(t.get("phys_complete_pct", 0) or 0),
+            "is_critical": _is_critical(t),
+            "total_float_days": round(_total_float_days(t), 1),
+            "duration_days": round(dur, 0),
+        })
+
+    proj_start = _fmt_iso(min(all_dates)) if all_dates else ""
+    proj_end = _fmt_iso(max(all_dates)) if all_dates else ""
+
+    return {
+        "tasks": rows,
+        "project_start": proj_start,
+        "project_end": proj_end,
+        "data_date": xer.data_date,
+    }
+
+
 # ── Master compute ────────────────────────────────────────────────────────────
 
 def compute_all(xers: list[XerData]) -> dict:
@@ -554,6 +639,7 @@ def compute_all(xers: list[XerData]) -> dict:
     milestones = compute_milestones(latest)
     critical = compute_critical_path(latest)
     observations = compute_observations(kpis, ppc, float_erosion)
+    gantt = compute_gantt(latest)
 
     return {
         "kpis": kpis,
@@ -564,6 +650,7 @@ def compute_all(xers: list[XerData]) -> dict:
         "float_erosion": float_erosion,
         "milestones": milestones,
         "critical_path": critical,
+        "gantt": gantt,
         "observations": observations,
         "files_analyzed": [x.filename for x in sorted_xers],
         "data_dates": [x.data_date for x in sorted_xers],
