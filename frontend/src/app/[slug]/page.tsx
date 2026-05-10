@@ -14,10 +14,11 @@ export default function CompanyUploadPage() {
   const [dragging, setDragging] = useState(false);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState("");
-  const user = getUser();
+  const [user, setUser] = useState<ReturnType<typeof getUser>>(null);
 
   useEffect(() => {
     if (!isLoggedIn()) { router.replace("/login"); return; }
+    setUser(getUser());
     fetchCompany(slug).then(setCompany).catch(() => {});
   }, [slug, router]);
 
