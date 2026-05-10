@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // SSR mode — required for [slug] dynamic routes and server-side branding
+  turbopack: {
+    root: __dirname,
+  },
   async rewrites() {
     const backendUrl = process.env.BACKEND_URL || "http://127.0.0.1:8001";
     return [
