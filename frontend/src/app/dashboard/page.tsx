@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnalysisResult, fetchAnalysis } from "@/lib/api";
-import { isLoggedIn, clearToken, getUser } from "@/lib/auth";
+import { isLoggedIn, clearToken, getUser, getUploadPath } from "@/lib/auth";
 import KPISummary from "@/components/KPISummary";
 import SCurve from "@/components/SCurve";
 import SPIByContractor from "@/components/SPIByContractor";
@@ -61,7 +61,7 @@ function DashboardInner() {
     if (aid) { loadAnalysis(Number(aid)); return; }
     // Fall back to sessionStorage
     const raw = sessionStorage.getItem("analysisResult");
-    if (!raw) { router.replace("/"); return; }
+    if (!raw) { router.replace(getUploadPath()); return; }
     setResult(JSON.parse(raw));
   }, [router, searchParams, loadAnalysis]);
 

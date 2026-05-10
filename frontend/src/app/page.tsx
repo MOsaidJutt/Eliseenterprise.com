@@ -1,7 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isLoggedIn } from "@/lib/auth";
+import { isLoggedIn, getUploadPath } from "@/lib/auth";
 
 const FEATURES = [
   { icon: "📊", title: "S-Curve Analysis", desc: "Baseline vs Actual vs Forecast with dynamic 12-month windowing." },
@@ -25,7 +25,7 @@ export default function LandingPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoggedIn()) router.replace("/dashboard");
+    if (isLoggedIn()) router.replace(getUploadPath());
   }, [router]);
 
   return (

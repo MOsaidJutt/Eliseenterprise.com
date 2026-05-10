@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { AnalysisResult, fetchAnalysis, fetchCompany, CompanyInfo } from "@/lib/api";
-import { isLoggedIn, clearToken, getUser } from "@/lib/auth";
+import { isLoggedIn, clearToken, getUser, getUploadPath } from "@/lib/auth";
 import KPISummary from "@/components/KPISummary";
 import SCurve from "@/components/SCurve";
 import SPIByContractor from "@/components/SPIByContractor";
@@ -57,7 +57,7 @@ function CompanyDashboardInner() {
     const aid = searchParams.get("analysis_id");
     if (aid) { loadAnalysis(Number(aid)); return; }
     const raw = sessionStorage.getItem("analysisResult");
-    if (!raw) { router.replace(`/${slug}`); return; }
+    if (!raw) { router.replace(getUploadPath()); return; }
     setResult(JSON.parse(raw));
   }, [slug, router, searchParams, loadAnalysis]);
 

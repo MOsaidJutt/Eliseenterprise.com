@@ -20,6 +20,7 @@ class UserResponse(BaseModel):
     name: str
     role: str
     company_id: Optional[int] = None
+    company_slug: Optional[str] = None
     created_at: datetime
 
     class Config:

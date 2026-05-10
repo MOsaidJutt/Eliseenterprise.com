@@ -7,6 +7,7 @@ export interface StoredUser {
   name: string;
   role: string;
   company_id: number | null;
+  company_slug: string | null;
 }
 
 export function setToken(token: string, user: StoredUser): void {
@@ -42,6 +43,11 @@ export function clearToken(): void {
 
 export function isAdmin(): boolean {
   return getUser()?.role === "admin";
+}
+
+export function getUploadPath(): string {
+  const slug = getUser()?.company_slug;
+  return slug ? `/${slug}` : "/login";
 }
 
 export function authHeader(): Record<string, string> {

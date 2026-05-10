@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from database import get_db
 import models, schemas
+from typing import Optional
 from auth import (
     hash_password, verify_password, create_access_token,
     get_current_user, require_admin,
@@ -18,10 +19,15 @@ async def login(body: schemas.LoginBody, db: AsyncSession = Depends(get_db)):
     if not user or not user.is_active or not verify_password(body.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     token = create_access_token({"sub": str(user.id), "role": user.role, "company_id": user.company_id})
-    return schemas.TokenResponse(
-        access_token=token,
-        user=schemas.UserResponse.model_validate(user),
-    )
+    company_slug: Optional[str] = None
+    if user.company_id:
+        co = await db.execute(select(models.Company).where(models.Company.id == user.company_id))
+        company = co.scalar_one_or_none()
+        if company:
+            company_slug = company.slug
+    user_data = schemas.UserResponse.model_validate(user)
+    user_data.company_slug = company_slug
+    return schemas.TokenResponse(access_token=token, user=user_data)
 
 
 @router.get("/me", response_model=schemas.UserResponse)

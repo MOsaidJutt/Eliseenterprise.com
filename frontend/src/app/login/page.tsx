@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { loginUser } from "@/lib/api";
-import { setToken, isLoggedIn } from "@/lib/auth";
+import { setToken, isLoggedIn, getUploadPath } from "@/lib/auth";
 
 export default function LoginPage() {
   const [email,    setEmail]    = useState("");
@@ -13,7 +13,7 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (isLoggedIn()) router.replace("/dashboard");
+    if (isLoggedIn()) router.replace(getUploadPath());
   }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -24,7 +24,7 @@ export default function LoginPage() {
     try {
       const { access_token, user } = await loginUser(email, password);
       setToken(access_token, user);
-      router.replace("/dashboard");
+      router.replace(user.company_slug ? `/${user.company_slug}` : "/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
