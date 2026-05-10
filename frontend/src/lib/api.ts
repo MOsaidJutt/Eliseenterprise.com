@@ -107,6 +107,7 @@ export interface AnalysisListItem {
 
 export interface StoredUser {
   id: number; email: string; name: string; role: string; company_id: number | null;
+  company_slug?: string | null;
 }
 
 export interface AIMessage {
@@ -130,6 +131,26 @@ export interface AdminStats {
   files_processed?: number;
   active_sessions?: number;
   log?: Array<{ id: number; timestamp: string; project: string; files: string[] }>;
+}
+
+export interface CompanyWithStats {
+  id: number; slug: string; name: string; logo_url: string | null;
+  created_at: string; user_count: number; analysis_count: number;
+}
+
+export interface DuplicateAnalysis {
+  id: number; project_name: string; created_at: string;
+  filenames: string[]; file_type: string;
+}
+
+export interface DuplicateResponse {
+  duplicate: true;
+  duplicate_analyses: DuplicateAnalysis[];
+}
+
+export interface AdminUser {
+  id: number; email: string; name: string; role: string;
+  company_id: number | null; company_slug: string | null; created_at: string; is_active?: boolean;
 }
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -157,17 +178,23 @@ export async function analyzeXerFiles(
   files: File[],
   fileType: "baseline" | "update" = "update",
   notes = "",
-): Promise<AnalysisResult> {
+  force: boolean = false,
+): Promise<AnalysisResult | DuplicateResponse> {
   const form = new FormData();
   files.forEach((f) => form.append("files", f));
   form.append("file_type", fileType);
   form.append("notes", notes);
+  form.append("force", force ? "true" : "false");
   const token = getToken();
   const res = await fetch("/api/analyze", {
     method: "POST",
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: form,
   });
+  if (res.status === 409) {
+    // Duplicate detected — return the response body without throwing
+    return res.json() as Promise<DuplicateResponse>;
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || `HTTP ${res.status}`);
@@ -244,6 +271,34 @@ export async function fetchAdminStats(): Promise<AdminStats> {
   return apiCall("/api/admin/stats");
 }
 
-export async function fetchAdminUsers(): Promise<StoredUser[]> {
+export async function fetchAdminCompanies(): Promise<CompanyWithStats[]> {
+  return apiCall("/api/admin/companies");
+}
+
+export async function createAdminCompany(data: { slug: string; name: string }): Promise<CompanyInfo> {
+  return apiCall("/api/admin/companies", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+}
+
+export async function updateAdminCompany(id: number, data: { name: string }): Promise<CompanyInfo> {
+  return apiCall(`/api/admin/companies/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+}
+
+export async function deleteAdminCompany(id: number): Promise<void> {
+  await apiCall(`/api/admin/companies/${id}`, { method: "DELETE" });
+}
+
+export async function fetchAdminUsers(): Promise<AdminUser[]> {
   return apiCall("/api/admin/users");
+}
+
+export async function createAdminUser(data: { email: string; password: string; name: string; role: string; company_id: number | null }): Promise<AdminUser> {
+  return apiCall("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+}
+
+export async function updateAdminUser(id: number, data: { is_active?: boolean; role?: string; name?: string }): Promise<AdminUser> {
+  return apiCall(`/api/admin/users/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+}
+
+export async function deactivateAdminUser(id: number): Promise<void> {
+  await apiCall(`/api/admin/users/${id}`, { method: "DELETE" });
 }

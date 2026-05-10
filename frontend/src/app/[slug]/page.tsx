@@ -1,20 +1,126 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { fetchCompany, analyzeXerFiles, CompanyInfo } from "@/lib/api";
+import {
+  fetchCompany,
+  analyzeXerFiles,
+  CompanyInfo,
+  DuplicateAnalysis,
+  DuplicateResponse,
+  AnalysisResult,
+} from "@/lib/api";
 import { isLoggedIn, clearToken, getUser } from "@/lib/auth";
 
+// ── Duplicate Modal ───────────────────────────────────────────────────────────
+function DuplicateModal({
+  slug,
+  duplicates,
+  onCancel,
+  onOverwrite,
+  overwriting,
+}: {
+  slug: string;
+  duplicates: DuplicateAnalysis[];
+  onCancel: () => void;
+  onOverwrite: () => void;
+  overwriting: boolean;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-[#0D1829] border border-white/[0.1] rounded-2xl shadow-2xl shadow-black/60 w-full max-w-lg">
+        {/* Header */}
+        <div className="px-6 pt-6 pb-4 border-b border-white/[0.07]">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-8 h-8 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-center justify-center">
+              <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+            </div>
+            <h2 className="text-slate-100 font-semibold text-sm">Files already analysed</h2>
+          </div>
+          <p className="text-slate-500 text-xs ml-11">
+            The following analyses already contain these files:
+          </p>
+        </div>
+
+        {/* Duplicate list */}
+        <div className="px-6 py-4 space-y-2.5 max-h-64 overflow-y-auto">
+          {duplicates.map((d) => (
+            <div
+              key={d.id}
+              className="bg-white/[0.03] border border-white/[0.07] rounded-xl px-4 py-3 flex items-start justify-between gap-3"
+            >
+              <div className="flex-1 min-w-0">
+                <p className="text-slate-200 text-xs font-semibold truncate">{d.project_name || "Untitled"}</p>
+                <p className="text-slate-500 text-[11px] mt-0.5">
+                  {new Date(d.created_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                  {" · "}
+                  <span className={`font-medium ${d.file_type === "baseline" ? "text-emerald-400" : "text-blue-400"}`}>
+                    {d.file_type}
+                  </span>
+                </p>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {d.filenames.map((fn) => (
+                    <span key={fn} className="text-[10px] text-slate-600 bg-white/[0.04] border border-white/[0.06] px-1.5 py-0.5 rounded font-mono truncate max-w-[14rem]">
+                      {fn}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <a
+                href={`/${slug}/dashboard?analysis_id=${d.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="shrink-0 text-[10px] text-blue-400 hover:text-blue-300 border border-blue-500/20 hover:border-blue-500/40 px-2.5 py-1 rounded-lg transition-all whitespace-nowrap"
+              >
+                View Previous
+              </a>
+            </div>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div className="px-6 pb-6 pt-3 border-t border-white/[0.07] flex gap-2 justify-end">
+          <button
+            onClick={onCancel}
+            disabled={overwriting}
+            className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200 border border-white/[0.08] rounded-xl transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onOverwrite}
+            disabled={overwriting}
+            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold bg-red-600 hover:bg-red-500 disabled:bg-red-900/40 disabled:cursor-not-allowed text-white rounded-xl transition-all"
+          >
+            {overwriting && (
+              <svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+              </svg>
+            )}
+            Overwrite — Delete Old &amp; Re-analyse
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function CompanyUploadPage() {
   const params = useParams();
   const slug   = params.slug as string;
   const router = useRouter();
-  const [company,  setCompany]  = useState<CompanyInfo | null>(null);
-  const [files,    setFiles]    = useState<File[]>([]);
-  const [fileType, setFileType] = useState<"baseline" | "update">("update");
-  const [dragging, setDragging] = useState(false);
-  const [loading,  setLoading]  = useState(false);
-  const [error,    setError]    = useState("");
-  const [user, setUser] = useState<ReturnType<typeof getUser>>(null);
+  const [company,     setCompany]     = useState<CompanyInfo | null>(null);
+  const [files,       setFiles]       = useState<File[]>([]);
+  const [fileType,    setFileType]    = useState<"baseline" | "update">("update");
+  const [dragging,    setDragging]    = useState(false);
+  const [loading,     setLoading]     = useState(false);
+  const [overwriting, setOverwriting] = useState(false);
+  const [error,       setError]       = useState("");
+  const [user,        setUser]        = useState<ReturnType<typeof getUser>>(null);
+  const [duplicateInfo, setDuplicateInfo] = useState<DuplicateAnalysis[] | null>(null);
 
   useEffect(() => {
     if (!isLoggedIn()) { router.replace("/login"); return; }
@@ -26,12 +132,36 @@ export default function CompanyUploadPage() {
     if (!fl) return;
     const xers = Array.from(fl).filter((f) => f.name.toLowerCase().endsWith(".xer"));
     if (xers.length === 0) { setError("Please select .xer files."); return; }
+
+    if (fileType === "baseline") {
+      // Baseline: only 1 file allowed — take the first
+      const first = xers[0];
+      setFiles([first]);
+      if (xers.length > 1) {
+        setError("Baseline accepts 1 file only — first file selected.");
+      } else {
+        setError("");
+      }
+      return;
+    }
+
     setFiles((prev) => {
       const combined = [...prev, ...xers];
       const unique   = combined.filter((f, i, arr) => arr.findIndex((x) => x.name === f.name) === i);
-      return unique.slice(0, 4);
+      return unique.slice(0, 10);
     });
     setError("");
+  }
+
+  // When file type changes to baseline, trim to 1 file
+  function handleFileTypeChange(type: "baseline" | "update") {
+    setFileType(type);
+    if (type === "baseline" && files.length > 1) {
+      setFiles([files[0]]);
+      setError("Baseline accepts 1 file only — first file selected.");
+    } else {
+      setError("");
+    }
   }
 
   async function handleAnalyze() {
@@ -39,9 +169,19 @@ export default function CompanyUploadPage() {
     setLoading(true);
     setError("");
     try {
-      const result = await analyzeXerFiles(files, fileType);
-      sessionStorage.setItem("analysisResult", JSON.stringify(result));
-      if (result.analysis_id) sessionStorage.setItem("analysisId", String(result.analysis_id));
+      const result = await analyzeXerFiles(files, fileType, "", false);
+
+      // Check for duplicate response
+      if ("duplicate" in result && result.duplicate === true) {
+        const dup = result as DuplicateResponse;
+        setDuplicateInfo(dup.duplicate_analyses);
+        setLoading(false);
+        return;
+      }
+
+      const analysis = result as AnalysisResult;
+      sessionStorage.setItem("analysisResult", JSON.stringify(analysis));
+      if (analysis.analysis_id) sessionStorage.setItem("analysisId", String(analysis.analysis_id));
       router.push(`/${slug}/dashboard`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed");
@@ -50,10 +190,46 @@ export default function CompanyUploadPage() {
     }
   }
 
+  async function handleOverwrite() {
+    setOverwriting(true);
+    setError("");
+    try {
+      const result = await analyzeXerFiles(files, fileType, "", true);
+
+      // Force=true should not return a duplicate, but guard anyway
+      if ("duplicate" in result && result.duplicate === true) {
+        setError("Unexpected duplicate response on overwrite.");
+        setOverwriting(false);
+        return;
+      }
+
+      const analysis = result as AnalysisResult;
+      setDuplicateInfo(null);
+      sessionStorage.setItem("analysisResult", JSON.stringify(analysis));
+      if (analysis.analysis_id) sessionStorage.setItem("analysisId", String(analysis.analysis_id));
+      router.push(`/${slug}/dashboard`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Overwrite failed");
+      setOverwriting(false);
+    }
+  }
+
   const logoUrl = company?.logo_url;
+  const maxFilesLabel = fileType === "baseline" ? "1 .xer file" : "Up to 10 .xer files";
 
   return (
     <main className="min-h-screen flex bg-[#070C18]">
+
+      {/* Duplicate Modal */}
+      {duplicateInfo && (
+        <DuplicateModal
+          slug={slug}
+          duplicates={duplicateInfo}
+          onCancel={() => setDuplicateInfo(null)}
+          onOverwrite={handleOverwrite}
+          overwriting={overwriting}
+        />
+      )}
 
       {/* Left branding */}
       <div className="hidden lg:flex flex-col justify-between w-80 xl:w-96 bg-[#0A1220] border-r border-white/[0.07] p-10 text-white shrink-0">
@@ -77,7 +253,7 @@ export default function CompanyUploadPage() {
             </div>
             <h1 className="text-2xl font-bold mb-3 text-slate-200">Schedule Analysis</h1>
             <p className="text-slate-500 text-sm leading-relaxed">
-              Upload 1–4 Primavera P6 .xer exports. Multiple weekly snapshots unlock PPC and float erosion tracking.
+              Upload 1–10 Primavera P6 .xer exports. Multiple weekly snapshots unlock PPC and float erosion tracking.
             </p>
           </div>
 
@@ -120,13 +296,13 @@ export default function CompanyUploadPage() {
             {/* File type toggle */}
             <div className="px-4 pt-4 flex gap-2">
               <button
-                onClick={() => setFileType("update")}
+                onClick={() => handleFileTypeChange("update")}
                 className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${fileType === "update" ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30" : "bg-white/[0.04] text-slate-500 hover:bg-white/[0.07] border border-white/[0.07]"}`}
               >
                 Update Snapshot
               </button>
               <button
-                onClick={() => setFileType("baseline")}
+                onClick={() => handleFileTypeChange("baseline")}
                 className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${fileType === "baseline" ? "bg-emerald-600 text-white shadow-lg shadow-emerald-900/30" : "bg-white/[0.04] text-slate-500 hover:bg-white/[0.07] border border-white/[0.07]"}`}
               >
                 Baseline
@@ -145,7 +321,8 @@ export default function CompanyUploadPage() {
               onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}
             >
               <input
-                type="file" multiple
+                type="file"
+                multiple={fileType !== "baseline"}
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: 10 }}
                 onChange={(e) => addFiles(e.target.files)}
               />
@@ -156,7 +333,7 @@ export default function CompanyUploadPage() {
                   </svg>
                 </div>
                 <p className="text-sm font-semibold text-slate-400">{dragging ? "Drop files here" : "Click or drag XER files"}</p>
-                <p className="text-xs text-slate-600">Up to 4 .xer files</p>
+                <p className="text-xs text-slate-600">{maxFilesLabel}</p>
               </div>
             </div>
 
@@ -193,8 +370,18 @@ export default function CompanyUploadPage() {
                 className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-900/40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-all text-sm shadow-lg shadow-blue-900/20"
               >
                 {loading ? (
-                  <><svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>Analysing…</>
-                ) : files.length === 0 ? "Select files above" : `Analyse ${files.length} file${files.length > 1 ? "s" : ""} →`}
+                  <>
+                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Analysing…
+                  </>
+                ) : files.length === 0 ? (
+                  "Select files above"
+                ) : (
+                  `Analyse ${files.length} file${files.length > 1 ? "s" : ""} →`
+                )}
               </button>
             </div>
           </div>

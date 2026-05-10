@@ -33,6 +33,25 @@ class UserCreate(BaseModel):
     role: str = "user"
     company_id: Optional[int] = None
 
+class UserUpdate(BaseModel):
+    is_active: Optional[bool] = None
+    role: Optional[str] = None
+    name: Optional[str] = None
+
+class UserWithCompany(BaseModel):
+    id: int
+    email: str
+    name: str
+    role: str
+    company_id: Optional[int] = None
+    company_slug: Optional[str] = None
+    company_name: Optional[str] = None
+    created_at: datetime
+    is_active: Optional[bool] = None
+
+    class Config:
+        from_attributes = True
+
 class PasswordChange(BaseModel):
     current_password: str
     new_password: str
@@ -50,8 +69,24 @@ class CompanyResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class CompanyCreate(BaseModel):
+    slug: str
+    name: str
+
 class CompanyUpdate(BaseModel):
     name: str
+
+class CompanyWithStats(BaseModel):
+    id: int
+    slug: str
+    name: str
+    logo_url: Optional[str] = None
+    created_at: datetime
+    user_count: int = 0
+    analysis_count: int = 0
+
+    class Config:
+        from_attributes = True
 
 
 # ── Analysis ──────────────────────────────────────────────────────────────────
@@ -95,6 +130,13 @@ class AnalysisFullResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class DuplicateAnalysisInfo(BaseModel):
+    id: int
+    project_name: str
+    created_at: str
+    filenames: List[str]
+    file_type: str
 
 
 # ── AI Chat ───────────────────────────────────────────────────────────────────

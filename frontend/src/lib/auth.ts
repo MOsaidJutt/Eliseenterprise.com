@@ -7,7 +7,7 @@ export interface StoredUser {
   name: string;
   role: string;
   company_id: number | null;
-  company_slug: string | null;
+  company_slug?: string | null;
 }
 
 export function setToken(token: string, user: StoredUser): void {

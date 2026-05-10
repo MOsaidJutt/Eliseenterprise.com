@@ -10,10 +10,9 @@ export async function POST(request: NextRequest) {
     const response = await fetch(`${BACKEND}/api/analyze`, {
       method: "POST",
       headers: request.headers,
-      // @ts-ignore — duplex needed for streaming request body in Node.js fetch
       body: request.body,
       duplex: "half",
-    });
+    } as RequestInit);
     const text = await response.text();
     return new NextResponse(text, {
       status: response.status,
