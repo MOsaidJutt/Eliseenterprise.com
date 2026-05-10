@@ -73,7 +73,7 @@ function CompanyDashboardInner() {
   }, []);
 
   const currentAnalysisId = result?.analysis_id
-    ?? (Number(sessionStorage.getItem("analysisId") || "0") || undefined);
+    ?? (typeof window !== "undefined" ? (Number(sessionStorage.getItem("analysisId") || "0") || undefined) : undefined);
 
   if (!result) {
     return (
