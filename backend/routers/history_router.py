@@ -74,6 +74,8 @@ async def patch_analysis(
         analysis.file_type = body.file_type
     if body.notes is not None:
         analysis.notes = body.notes
+    if body.project_name is not None:
+        analysis.project_name = body.project_name
     await db.commit()
     await db.refresh(analysis)
     return schemas.AnalysisListItem.model_validate(analysis)

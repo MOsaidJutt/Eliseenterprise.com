@@ -220,7 +220,7 @@ export async function fetchAnalysis(id: number): Promise<AnalysisResult & { anal
 
 export async function patchAnalysis(
   id: number,
-  data: { file_type?: string; notes?: string }
+  data: { file_type?: string; notes?: string; project_name?: string }
 ): Promise<AnalysisListItem> {
   return apiCall(`/api/analyses/${id}`, {
     method: "PATCH",

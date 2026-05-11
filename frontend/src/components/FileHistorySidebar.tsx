@@ -20,12 +20,14 @@ function timeAgo(iso: string): string {
 }
 
 export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewAnalysis }: Props) {
-  const [items,     setItems]     = useState<AnalysisListItem[]>([]);
-  const [total,     setTotal]     = useState(0);
-  const [loading,   setLoading]   = useState(true);
-  const [filter,    setFilter]    = useState<"" | "baseline" | "update">("");
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editNote,  setEditNote]  = useState("");
+  const [items,      setItems]      = useState<AnalysisListItem[]>([]);
+  const [total,      setTotal]      = useState(0);
+  const [loading,    setLoading]    = useState(true);
+  const [filter,     setFilter]     = useState<"" | "baseline" | "update">("");
+  const [editingId,  setEditingId]  = useState<number | null>(null);
+  const [editNote,   setEditNote]   = useState("");
+  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renameVal,  setRenameVal]  = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -60,6 +62,20 @@ export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewA
     setEditingId(null);
   }
 
+  async function saveRename(id: number) {
+    const val = renameVal.trim();
+    if (!val) { setRenamingId(null); return; }
+    await patchAnalysis(id, { project_name: val });
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, project_name: val } : i));
+    setRenamingId(null);
+  }
+
+  function startRename(item: AnalysisListItem, e: React.MouseEvent) {
+    e.stopPropagation();
+    setRenamingId(item.id);
+    setRenameVal(item.project_name || item.filenames[0] || "");
+  }
+
   return (
     <div className="flex flex-col h-full bg-[#080E1C] text-white border-r border-white/[0.06]">
 
@@ -87,7 +103,7 @@ export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewA
               onClick={() => setFilter(f)}
               className={`flex-1 text-[10px] py-1 rounded-md font-semibold transition-colors ${filter === f ? "bg-white/[0.1] text-slate-200" : "text-slate-600 hover:text-slate-400"}`}
             >
-              {f === "" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+              {f === "" ? "All" : f === "baseline" ? "Baseline" : "Updates"}
             </button>
           ))}
         </div>
@@ -108,6 +124,8 @@ export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewA
           <div className="divide-y divide-white/[0.04]">
             {items.map((item) => {
               const isActive = item.id === currentAnalysisId;
+              const displayName = item.project_name || item.filenames[0] || "Unnamed";
+
               return (
                 <div
                   key={item.id}
@@ -116,18 +134,48 @@ export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewA
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-slate-300 truncate leading-tight">
-                        {item.project_name || item.filenames[0] || "Unnamed"}
-                      </p>
+                      {/* Rename mode */}
+                      {renamingId === item.id ? (
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <input
+                            autoFocus
+                            value={renameVal}
+                            onChange={(e) => setRenameVal(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveRename(item.id);
+                              if (e.key === "Escape") setRenamingId(null);
+                            }}
+                            onBlur={() => saveRename(item.id)}
+                            className="w-full bg-white/[0.07] text-slate-200 text-xs px-2 py-1 rounded outline-none border border-blue-500/40 placeholder-slate-700"
+                          />
+                        </div>
+                      ) : (
+                        <p
+                          onDoubleClick={(e) => startRename(item, e)}
+                          className="text-xs font-semibold text-slate-300 truncate leading-tight cursor-text"
+                          title="Double-click to rename"
+                        >
+                          {displayName}
+                        </p>
+                      )}
                       <p className="text-[10px] text-slate-600 mt-0.5">{timeAgo(item.created_at)}</p>
                     </div>
+
                     <div className="flex items-center gap-1 shrink-0">
+                      {/* Baseline / Update badge */}
                       <button
                         onClick={(e) => handleToggleType(item, e)}
-                        className={`text-[9px] px-1.5 py-0.5 rounded font-bold transition-colors ${item.file_type === "baseline" ? "bg-emerald-500/15 text-emerald-400" : "bg-slate-700/60 text-slate-500"}`}
+                        title="Click to toggle type"
+                        className={`text-[9px] px-2 py-0.5 rounded-full font-semibold transition-colors whitespace-nowrap ${
+                          item.file_type === "baseline"
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                            : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                        }`}
                       >
-                        {item.file_type === "baseline" ? "BL" : "UP"}
+                        {item.file_type === "baseline" ? "Baseline" : "Update"}
                       </button>
+
+                      {/* Delete */}
                       <button
                         onClick={(e) => handleDelete(item.id, e)}
                         className="opacity-0 group-hover:opacity-100 text-slate-700 hover:text-red-400 transition-all p-0.5"
@@ -139,6 +187,7 @@ export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewA
                     </div>
                   </div>
 
+                  {/* File names */}
                   <div className="mt-1.5 flex flex-wrap gap-1">
                     {item.filenames.slice(0, 2).map((f) => (
                       <span key={f} className="text-[9px] bg-white/[0.04] text-slate-600 px-1.5 py-0.5 rounded font-mono truncate max-w-[120px]">{f}</span>
@@ -148,6 +197,7 @@ export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewA
                     )}
                   </div>
 
+                  {/* Note editing */}
                   {editingId === item.id ? (
                     <div className="mt-2" onClick={(e) => e.stopPropagation()}>
                       <input

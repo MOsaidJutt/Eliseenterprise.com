@@ -1,14 +1,34 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 @import "tailwindcss";
 
+/* ── Light mode (default) ─────────────────────────────── */
 :root {
-  --bg-app:    #070C18;
-  --bg-card:   #0D1829;
-  --bg-card2:  #0F1E35;
-  --bg-raised: #162038;
-  --border:    rgba(148, 163, 184, 0.08);
-  --border-md: rgba(148, 163, 184, 0.12);
+  --bg-app:        #F1F5F9;
+  --bg-card:       #FFFFFF;
+  --bg-card2:      #F8FAFC;
+  --bg-raised:     #E2E8F0;
+  --bg-nav:        #1E293B;
+  --border:        rgba(15, 23, 42, 0.08);
+  --border-md:     rgba(15, 23, 42, 0.14);
+  --border-accent: rgba(59, 130, 246, 0.35);
+  --text-primary:  #0F172A;
+  --text-secondary:#475569;
+  --text-muted:    #94A3B8;
+}
+
+/* ── Dark mode ────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg-app:        #070C18;
+  --bg-card:       #0D1829;
+  --bg-card2:      #0F1E35;
+  --bg-raised:     #162038;
+  --bg-nav:        #0B1525;
+  --border:        rgba(148, 163, 184, 0.08);
+  --border-md:     rgba(148, 163, 184, 0.12);
   --border-accent: rgba(59, 130, 246, 0.25);
+  --text-primary:  #F1F5F9;
+  --text-secondary:#CBD5E1;
+  --text-muted:    #64748B;
 }
 
 * { box-sizing: border-box; }
@@ -20,11 +40,12 @@ html {
 
 body {
   background: var(--bg-app);
-  color: #CBD5E1;
+  color: var(--text-primary);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   width: 100%;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
 /* Subtle dot-grid overlay — renders behind all content */
@@ -32,17 +53,27 @@ body::before {
   content: '';
   position: fixed;
   inset: 0;
-  background-image: radial-gradient(circle, rgba(148,163,184,0.045) 1px, transparent 1px);
+  background-image: radial-gradient(circle, rgba(15,23,42,0.055) 1px, transparent 1px);
   background-size: 28px 28px;
   pointer-events: none;
   z-index: -1;
 }
 
+[data-theme="dark"] body::before {
+  background-image: radial-gradient(circle, rgba(148,163,184,0.045) 1px, transparent 1px);
+}
+
 /* ── Glass card ──────────────────────────────────────── */
 .glass-card {
-  background: rgba(13, 24, 41, 0.82);
+  background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 4px 32px rgba(0,0,0,0.07), inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+[data-theme="dark"] .glass-card {
+  background: rgba(13, 24, 41, 0.82);
   border: 1px solid rgba(148, 163, 184, 0.08);
   box-shadow: 0 4px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
 }
@@ -55,7 +86,7 @@ body::before {
 
 /* ── Scrollbar ───────────────────────────────────────── */
 ::-webkit-scrollbar       { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: rgba(0,0,0,0.25); }
+::-webkit-scrollbar-track { background: rgba(0,0,0,0.08); }
 ::-webkit-scrollbar-thumb { background: rgba(100,116,139,0.35); border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(100,116,139,0.55); }
 

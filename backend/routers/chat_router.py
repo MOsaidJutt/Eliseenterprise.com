@@ -100,7 +100,6 @@ async def chat(
         conversation = conv_result.scalar_one_or_none()
 
     if not conversation:
-        # Auto-title: first 60 chars of first message
         title = body.message[:60] + ("…" if len(body.message) > 60 else "")
         conversation = models.AIConversation(
             user_id=user.id,
@@ -109,6 +108,20 @@ async def chat(
         )
         db.add(conversation)
         await db.flush()
+
+    # If no analysis data is loaded, return a synthetic response without calling OpenAI
+    if not context_str:
+        no_data_reply = (
+            "No schedule data is currently loaded. "
+            "Please select an analysis from the history panel or upload a new XER file to get started."
+        )
+        user_msg = models.AIMessage(conversation_id=conversation.id, role="user", content=body.message)
+        assistant_msg = models.AIMessage(conversation_id=conversation.id, role="assistant", content=no_data_reply)
+        db.add(user_msg)
+        db.add(assistant_msg)
+        await db.commit()
+        await db.refresh(assistant_msg)
+        return schemas.ChatResponse(reply=no_data_reply, conversation_id=conversation.id, message_id=assistant_msg.id)
 
     # Build message history for GPT
     history_result = await db.execute(
@@ -120,13 +133,15 @@ async def chat(
     history = history_result.scalars().all()
 
     system_prompt = (
-        "You are an expert project management assistant specialising in Primavera P6 "
-        "schedule analysis. You analyse programme health data and provide concise, "
-        "professional recommendations. Cite specific numbers from the data provided.\n"
-        "Be direct and actionable. When you don't know something, say so clearly."
+        "You are a schedule analytics assistant for Primavera P6 project data. "
+        "You ONLY answer questions based on the specific schedule data provided below. "
+        "Do NOT use general knowledge or outside information. "
+        "If a question cannot be answered from the data, respond: "
+        "'I can only answer questions about the schedule data that has been loaded.' "
+        "Always cite specific numbers, dates, and activity names from the data. "
+        "Be concise and professional.\n\n"
+        f"--- SCHEDULE DATA ---\n{context_str}\n--- END DATA ---"
     )
-    if context_str:
-        system_prompt += f"\n\n--- SCHEDULE DATA ---\n{context_str}\n--- END DATA ---"
 
     messages = [{"role": "system", "content": system_prompt}]
     for msg in history:
@@ -143,16 +158,8 @@ async def chat(
     reply_text = response.choices[0].message.content
 
     # Save user message + assistant reply
-    user_msg = models.AIMessage(
-        conversation_id=conversation.id,
-        role="user",
-        content=body.message,
-    )
-    assistant_msg = models.AIMessage(
-        conversation_id=conversation.id,
-        role="assistant",
-        content=reply_text,
-    )
+    user_msg = models.AIMessage(conversation_id=conversation.id, role="user", content=body.message)
+    assistant_msg = models.AIMessage(conversation_id=conversation.id, role="assistant", content=reply_text)
     db.add(user_msg)
     db.add(assistant_msg)
     await db.commit()

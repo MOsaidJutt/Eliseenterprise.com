@@ -33,17 +33,14 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex bg-[#070C18]">
+    <main className="min-h-screen flex" style={{ background: "var(--bg-app)" }}>
 
       {/* Left branding panel */}
-      <div className="hidden lg:flex flex-col justify-between w-80 xl:w-96 bg-[#0A1220] border-r border-white/[0.07] p-10 text-white shrink-0">
+      <div className="hidden lg:flex flex-col justify-between w-80 xl:w-96 bg-slate-900 border-r border-white/[0.07] p-10 text-white shrink-0">
         <div>
           <div className="flex items-center gap-3 mb-12">
-            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-sm font-bold shadow-lg shadow-blue-900/40">P</div>
-            <div>
-              <p className="font-bold text-sm text-slate-200 leading-tight">Plainview</p>
-              <p className="text-slate-600 text-xs">Elise Enterprise</p>
-            </div>
+            <img src="/plainview-logo.png" alt="PlainView" className="h-9 w-auto object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
           </div>
 
           <div className="mb-8">
@@ -86,13 +83,8 @@ export default function LoginPage() {
 
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-sm">P</span>
-            </div>
-            <div>
-              <p className="font-bold text-slate-200 text-sm">Plainview</p>
-              <p className="text-slate-600 text-xs">Elise Enterprise</p>
-            </div>
+            <img src="/plainview-logo.png" alt="PlainView" className="h-8 w-auto object-contain"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
           </div>
 
           <div className="mb-8">

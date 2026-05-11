@@ -109,6 +109,7 @@ class AnalysisListResponse(BaseModel):
 class AnalysisPatch(BaseModel):
     file_type: Optional[str] = None
     notes: Optional[str] = None
+    project_name: Optional[str] = None
 
 class AnalysisFullResponse(BaseModel):
     analysis_id: int

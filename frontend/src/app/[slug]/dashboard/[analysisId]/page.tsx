@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback, Suspense } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { AnalysisResult, fetchAnalysis, fetchCompany, CompanyInfo } from "@/lib/api";
 import { isLoggedIn, clearToken, getUser, getUploadPath } from "@/lib/auth";
 import KPISummary from "@/components/KPISummary";
@@ -29,11 +29,11 @@ const NAV = [
   { id: "critical",     label: "Critical Path",        icon: "M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" },
 ];
 
-function CompanyDashboardInner() {
+function AnalysisDashboardInner() {
   const params = useParams();
   const slug = params.slug as string;
+  const analysisId = Number(params.analysisId);
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [company, setCompany] = useState<CompanyInfo | null>(null);
   const [active, setActive] = useState("kpi");
@@ -44,8 +44,6 @@ function CompanyDashboardInner() {
     try {
       const data = await fetchAnalysis(id);
       setResult(data);
-      sessionStorage.setItem("analysisResult", JSON.stringify(data));
-      sessionStorage.setItem("analysisId", String(id));
       setSidebarOpen(false);
       router.push(`/${slug}/dashboard/${id}`);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -55,12 +53,8 @@ function CompanyDashboardInner() {
   useEffect(() => {
     if (!isLoggedIn()) { router.replace("/login"); return; }
     fetchCompany(slug).then(setCompany).catch(() => {});
-    const aid = searchParams.get("analysis_id");
-    if (aid) { loadAnalysis(Number(aid)); return; }
-    const raw = sessionStorage.getItem("analysisResult");
-    if (!raw) { router.replace(getUploadPath()); return; }
-    setResult(JSON.parse(raw));
-  }, [slug, router, searchParams, loadAnalysis]);
+    fetchAnalysis(analysisId).then(setResult).catch(() => router.replace(getUploadPath()));
+  }, [slug, analysisId, router]);
 
   useEffect(() => {
     const handler = () => {
@@ -72,9 +66,6 @@ function CompanyDashboardInner() {
     window.addEventListener("scroll", handler, { passive: true });
     return () => window.removeEventListener("scroll", handler);
   }, []);
-
-  const currentAnalysisId = result?.analysis_id
-    ?? (typeof window !== "undefined" ? (Number(sessionStorage.getItem("analysisId") || "0") || undefined) : undefined);
 
   if (!result) {
     return (
@@ -91,7 +82,7 @@ function CompanyDashboardInner() {
       <div className={`${sidebarOpen ? "w-64" : "w-0"} shrink-0 transition-all duration-300 overflow-hidden no-print`}>
         <div className="w-64 h-full">
           <FileHistorySidebar
-            currentAnalysisId={currentAnalysisId}
+            currentAnalysisId={analysisId}
             onSelect={loadAnalysis}
             onNewAnalysis={() => router.push(`/${slug}`)}
           />
@@ -187,15 +178,15 @@ function CompanyDashboardInner() {
         </div>
       </main>
 
-      <AIChatPanel analysisId={currentAnalysisId} />
+      <AIChatPanel analysisId={analysisId} />
     </div>
   );
 }
 
-export default function CompanyDashboardPage() {
+export default function AnalysisDashboardPage() {
   return (
     <Suspense>
-      <CompanyDashboardInner />
+      <AnalysisDashboardInner />
     </Suspense>
   );
 }

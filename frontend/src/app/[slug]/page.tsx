@@ -181,8 +181,12 @@ export default function CompanyUploadPage() {
 
       const analysis = result as AnalysisResult;
       sessionStorage.setItem("analysisResult", JSON.stringify(analysis));
-      if (analysis.analysis_id) sessionStorage.setItem("analysisId", String(analysis.analysis_id));
-      router.push(`/${slug}/dashboard`);
+      if (analysis.analysis_id) {
+        sessionStorage.setItem("analysisId", String(analysis.analysis_id));
+        router.push(`/${slug}/dashboard/${analysis.analysis_id}`);
+      } else {
+        router.push(`/${slug}/dashboard`);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Analysis failed");
     } finally {
@@ -206,8 +210,12 @@ export default function CompanyUploadPage() {
       const analysis = result as AnalysisResult;
       setDuplicateInfo(null);
       sessionStorage.setItem("analysisResult", JSON.stringify(analysis));
-      if (analysis.analysis_id) sessionStorage.setItem("analysisId", String(analysis.analysis_id));
-      router.push(`/${slug}/dashboard`);
+      if (analysis.analysis_id) {
+        sessionStorage.setItem("analysisId", String(analysis.analysis_id));
+        router.push(`/${slug}/dashboard/${analysis.analysis_id}`);
+      } else {
+        router.push(`/${slug}/dashboard`);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Overwrite failed");
       setOverwriting(false);
@@ -238,7 +246,8 @@ export default function CompanyUploadPage() {
             {logoUrl ? (
               <img src={logoUrl} alt={company?.name} className="h-9 w-auto object-contain" />
             ) : (
-              <div className="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-sm font-bold shadow-lg shadow-blue-900/40">P</div>
+              <img src="/plainview-logo.png" alt="PlainView" className="h-9 w-auto object-contain max-w-[140px]"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
             )}
             <div>
               <p className="font-bold text-sm text-slate-200">{company?.name || slug}</p>
