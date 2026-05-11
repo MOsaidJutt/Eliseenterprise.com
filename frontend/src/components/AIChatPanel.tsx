@@ -114,7 +114,11 @@ export default function AIChatPanel({ analysisId }: Props) {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-xl shadow-blue-900/40 transition-all hover:scale-105 no-print"
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 font-semibold text-xs text-white px-4 py-2.5 rounded-full transition-all hover:scale-105 no-print"
+          style={{
+            background: "var(--primary)",
+            boxShadow: "0 4px 20px rgba(30,64,175,0.35)",
+          }}
           title="Open AI Chat"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -122,7 +126,8 @@ export default function AIChatPanel({ analysisId }: Props) {
           </svg>
           AI Chat
           {conversations.length > 0 && (
-            <span className="bg-emerald-500 rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold">
+            <span className="rounded-full w-4 h-4 flex items-center justify-center font-bold"
+              style={{ fontSize: 9, background: "#059669" }}>
               {conversations.length > 9 ? "9+" : conversations.length}
             </span>
           )}
@@ -137,29 +142,40 @@ export default function AIChatPanel({ analysisId }: Props) {
         {/* Resize handle */}
         <div
           onMouseDown={onResizeMouseDown}
-          className="w-1.5 cursor-col-resize bg-white/[0.04] hover:bg-blue-500/40 transition-colors shrink-0 select-none"
+          className="w-1.5 cursor-col-resize shrink-0 select-none transition-colors"
+          style={{ background: "var(--border)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--primary)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--border)")}
         />
 
         {/* Panel body */}
-        <div className="flex flex-col flex-1 bg-[#090F1C] border-l border-white/[0.08] overflow-hidden shadow-2xl shadow-black/50">
+        <div className="flex flex-col flex-1 overflow-hidden"
+          style={{ background: "var(--bg-card)", borderLeft: "1px solid var(--border)", boxShadow: "-8px 0 40px rgba(13,27,62,0.1)" }}>
 
           {/* Header */}
-          <div className="px-4 py-3 bg-[#0B1525] border-b border-white/[0.08] flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-              <span className="text-slate-200 text-sm font-bold">AI Schedule Assistant</span>
+          <div className="px-4 py-3 shrink-0 flex items-center justify-between"
+            style={{ background: "var(--bg-nav)", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="flex items-center gap-2.5">
+              <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#34D399" }} />
+              <span className="font-bold" style={{ fontSize: 13, color: "#F1F5F9" }}>AI Schedule Assistant</span>
               {analysisId && (
-                <span className="text-slate-600 text-[10px] bg-white/[0.05] px-1.5 py-0.5 rounded-md">#{analysisId}</span>
+                <span className="rounded-md px-1.5 py-0.5" style={{ fontSize: 10, color: "#64748B", background: "rgba(255,255,255,0.06)" }}>
+                  #{analysisId}
+                </span>
               )}
             </div>
             <div className="flex items-center gap-2">
               <button
                 onClick={newChat}
-                className="text-[10px] text-blue-400 hover:text-blue-300 border border-blue-500/20 hover:border-blue-500/40 px-2.5 py-1 rounded-lg transition-all"
-              >
+                className="font-medium rounded-lg px-2.5 py-1 transition-all"
+                style={{ fontSize: 10, color: "#93C5FD", border: "1px solid rgba(147,197,253,0.2)", background: "rgba(147,197,253,0.06)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(147,197,253,0.12)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(147,197,253,0.06)")}>
                 + New Chat
               </button>
-              <button onClick={() => setOpen(false)} className="text-slate-600 hover:text-slate-400 transition-colors">
+              <button onClick={() => setOpen(false)} style={{ color: "#64748B" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#CBD5E1")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#64748B")}>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -171,27 +187,40 @@ export default function AIChatPanel({ analysisId }: Props) {
           <div className="flex flex-1 overflow-hidden">
 
             {/* Conversation history sidebar */}
-            <div className="w-36 shrink-0 border-r border-white/[0.06] flex flex-col bg-[#070C18]/60">
-              <p className="text-[9px] font-bold text-slate-600 uppercase tracking-widest px-3 pt-3 pb-2 shrink-0">History</p>
+            <div className="w-36 shrink-0 flex flex-col" style={{ borderRight: "1px solid var(--border)", background: "var(--bg-card2)" }}>
+              <p className="font-bold uppercase tracking-widest px-3 pt-3 pb-2 shrink-0"
+                style={{ fontSize: 9, color: "var(--text-muted)", letterSpacing: "0.1em" }}>History</p>
               <div className="flex-1 overflow-y-auto">
                 {loadingConvs ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="w-4 h-4 border-2 border-blue-500/30 border-t-blue-400 rounded-full animate-spin" />
+                    <div className="w-4 h-4 rounded-full border-2 animate-spin"
+                      style={{ borderColor: "var(--border)", borderTopColor: "var(--primary)" }} />
                   </div>
                 ) : conversations.length === 0 ? (
-                  <p className="text-[10px] text-slate-700 px-3 py-4 text-center leading-relaxed">No conversations yet</p>
+                  <p className="px-3 py-4 text-center leading-relaxed" style={{ fontSize: 10, color: "var(--text-muted)" }}>
+                    No conversations yet
+                  </p>
                 ) : conversations.map((conv) => (
                   <div
                     key={conv.id}
                     onClick={() => loadConversation(conv.id)}
-                    className={`group px-3 py-2 cursor-pointer border-b border-white/[0.04] transition-colors relative ${conv.id === activeConvId ? "bg-blue-600/15 border-l-2 border-l-blue-500" : "hover:bg-white/[0.03] border-l-2 border-l-transparent"}`}
+                    className="group px-3 py-2 cursor-pointer relative transition-colors"
+                    style={{
+                      borderBottom: "1px solid var(--border)",
+                      borderLeft: `2px solid ${conv.id === activeConvId ? "var(--primary)" : "transparent"}`,
+                      background: conv.id === activeConvId ? "var(--primary-light)" : "transparent",
+                    }}
+                    onMouseEnter={(e) => { if (conv.id !== activeConvId) (e.currentTarget as HTMLDivElement).style.background = "var(--bg-raised)"; }}
+                    onMouseLeave={(e) => { if (conv.id !== activeConvId) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
                   >
-                    <p className="text-[10px] text-slate-400 font-medium leading-tight truncate pr-4">{conv.title}</p>
-                    <p className="text-[9px] text-slate-700 mt-0.5">{timeAgo(conv.created_at as string)}</p>
+                    <p className="font-medium leading-tight truncate pr-4" style={{ fontSize: 10, color: "var(--text-primary)" }}>{conv.title}</p>
+                    <p style={{ fontSize: 9, color: "var(--text-muted)", marginTop: 2 }}>{timeAgo(conv.created_at as string)}</p>
                     <button
                       onClick={(e) => handleDeleteConv(conv.id, e)}
-                      className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 text-slate-700 hover:text-red-400 transition-all"
-                    >
+                      className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-all"
+                      style={{ color: "var(--text-muted)" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = "var(--danger)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}>
                       <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                       </svg>
@@ -208,12 +237,13 @@ export default function AIChatPanel({ analysisId }: Props) {
               <div className="flex-1 overflow-y-auto p-3 space-y-3">
                 {messages.length === 0 && (
                   <div className="text-center py-8">
-                    <div className="w-10 h-10 bg-blue-500/10 border border-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-3"
+                      style={{ background: "var(--primary-light)", border: "1px solid rgba(30,64,175,0.15)" }}>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "var(--primary)" }}>
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                       </svg>
                     </div>
-                    <p className="text-xs text-slate-400 font-medium mb-4">Ask about this schedule</p>
+                    <p className="font-medium mb-4" style={{ fontSize: 12, color: "var(--text-secondary)" }}>Ask about this schedule</p>
                     {[
                       "Which activities are most at risk?",
                       "What's causing the delay?",
@@ -222,8 +252,10 @@ export default function AIChatPanel({ analysisId }: Props) {
                       <button
                         key={q}
                         onClick={() => setInput(q)}
-                        className="block w-full text-left text-[10px] text-slate-500 hover:text-slate-300 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] px-3 py-2 rounded-lg transition-all mb-2"
-                      >
+                        className="block w-full text-left rounded-lg px-3 py-2 transition-all mb-2"
+                        style={{ fontSize: 10, color: "var(--text-secondary)", background: "var(--bg-card2)", border: "1px solid var(--border)" }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--primary)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--primary)"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--border)"; (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"; }}>
                         {q}
                       </button>
                     ))}
@@ -232,11 +264,10 @@ export default function AIChatPanel({ analysisId }: Props) {
 
                 {messages.map((msg) => (
                   <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[90%] text-xs px-3 py-2 rounded-xl leading-relaxed whitespace-pre-wrap ${
-                      msg.role === "user"
-                        ? "bg-blue-600 text-white rounded-br-sm"
-                        : "bg-white/[0.06] border border-white/[0.08] text-slate-300 rounded-bl-sm"
-                    }`}>
+                    <div className={`max-w-[90%] text-xs px-3 py-2 rounded-xl leading-relaxed whitespace-pre-wrap`}
+                      style={msg.role === "user"
+                        ? { background: "var(--primary)", color: "#fff", borderBottomRightRadius: 4 }
+                        : { background: "var(--bg-card2)", border: "1px solid var(--border)", color: "var(--text-secondary)", borderBottomLeftRadius: 4 }}>
                       {msg.content}
                     </div>
                   </div>
@@ -244,16 +275,21 @@ export default function AIChatPanel({ analysisId }: Props) {
 
                 {loading && (
                   <div className="flex justify-start">
-                    <div className="bg-white/[0.06] border border-white/[0.08] px-3 py-2 rounded-xl rounded-bl-sm flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                      <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                      <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                    <div className="px-3 py-2 rounded-xl rounded-bl-sm flex items-center gap-1.5"
+                      style={{ background: "var(--bg-card2)", border: "1px solid var(--border)" }}>
+                      <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "var(--primary)", animationDelay: "0ms" }} />
+                      <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "var(--primary)", animationDelay: "150ms" }} />
+                      <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ background: "var(--primary)", animationDelay: "300ms" }} />
                     </div>
                   </div>
                 )}
 
                 {error && (
-                  <div className="bg-red-500/[0.08] border border-red-500/20 text-red-400 text-xs px-3 py-2 rounded-lg">
+                  <div className="px-3 py-2 rounded-lg text-xs flex items-center gap-2"
+                    style={{ background: "var(--danger-light)", border: "1px solid rgba(220,38,38,0.2)", color: "var(--danger)" }}>
+                    <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                     {error}
                   </div>
                 )}
@@ -262,8 +298,9 @@ export default function AIChatPanel({ analysisId }: Props) {
               </div>
 
               {/* Input */}
-              <div className="px-3 pb-3 pt-2 shrink-0 border-t border-white/[0.06]">
-                <div className="flex gap-2 bg-white/[0.04] border border-white/[0.1] rounded-xl overflow-hidden">
+              <div className="px-3 pb-3 pt-2 shrink-0" style={{ borderTop: "1px solid var(--border)" }}>
+                <div className="flex gap-2 rounded-xl overflow-hidden"
+                  style={{ background: "var(--bg-card2)", border: "1px solid var(--border-md)" }}>
                   <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
@@ -271,19 +308,20 @@ export default function AIChatPanel({ analysisId }: Props) {
                     placeholder="Ask about risks, delays, milestones…"
                     rows={2}
                     disabled={loading}
-                    className="flex-1 bg-transparent text-xs text-slate-300 px-3 py-2 outline-none resize-none placeholder-slate-600 disabled:opacity-50"
+                    className="flex-1 bg-transparent outline-none resize-none"
+                    style={{ fontSize: 12, color: "var(--text-primary)", padding: "8px 12px", fontFamily: "inherit" }}
                   />
                   <button
                     onClick={send}
                     disabled={!input.trim() || loading}
-                    className="px-3 text-blue-400 hover:text-blue-300 disabled:text-slate-700 transition-colors shrink-0"
-                  >
+                    className="px-3 transition-colors shrink-0"
+                    style={{ color: !input.trim() || loading ? "var(--text-muted)" : "var(--primary)" }}>
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
                   </button>
                 </div>
-                <p className="text-[9px] text-slate-700 text-center mt-1">Enter · Shift+Enter for newline</p>
+                <p className="text-center mt-1" style={{ fontSize: 9, color: "var(--text-muted)" }}>Enter to send · Shift+Enter for newline</p>
               </div>
             </div>
           </div>
@@ -292,7 +330,7 @@ export default function AIChatPanel({ analysisId }: Props) {
 
       {/* Mobile backdrop */}
       {open && (
-        <div className="fixed inset-0 bg-black/40 z-20 lg:hidden" onClick={() => setOpen(false)} />
+        <div className="fixed inset-0 z-20 lg:hidden" style={{ background: "rgba(13,27,62,0.4)" }} onClick={() => setOpen(false)} />
       )}
     </>
   );

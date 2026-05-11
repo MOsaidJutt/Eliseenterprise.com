@@ -15,15 +15,9 @@ function dateToMs(s: string) { return s ? new Date(s).getTime() : 0; }
 export default function GanttChart({ data }: Props) {
   const { tasks, project_start, project_end, data_date } = data;
 
-  // Chart open/collapsed (whole section)
   const [chartOpen, setChartOpen] = useState(false);
-
-  // WBS row collapsing
   const [collapsedWbs, setCollapsedWbs] = useState<Set<string>>(new Set());
-
-  // Level filter — null = all, number = max wbs_level to show
   const [levelFilter, setLevelFilter] = useState<number>(1);
-
   const [search, setSearch] = useState("");
 
   const rangeStart = dateToMs(project_start);
@@ -33,7 +27,6 @@ export default function GanttChart({ data }: Props) {
 
   function pct(ms: number) { return Math.max(0, Math.min(100, (ms - rangeStart) / rangeDur * 100)); }
 
-  // Find unique WBS levels in data
   const uniqueLevels = useMemo(() => {
     const lvls = [...new Set(tasks.map((t) => t.wbs_level))].sort((a, b) => a - b);
     return lvls;
@@ -59,14 +52,8 @@ export default function GanttChart({ data }: Props) {
     });
   }
 
-  function collapseAll() {
-    const allWbs = new Set(tasks.map((t) => t.wbs_id));
-    setCollapsedWbs(allWbs);
-  }
-
-  function expandAll() {
-    setCollapsedWbs(new Set());
-  }
+  function collapseAll() { setCollapsedWbs(new Set(tasks.map((t) => t.wbs_id))); }
+  function expandAll()   { setCollapsedWbs(new Set()); }
 
   function TaskBar({ t }: { t: GanttTask }) {
     const ps  = dateToMs(t.planned_start);
@@ -76,32 +63,34 @@ export default function GanttChart({ data }: Props) {
     const es  = dateToMs(t.early_start);
     const ef  = dateToMs(t.early_finish);
 
-    const barsOk  = ps && pf && pf > ps;
+    const barsOk   = ps && pf && pf > ps;
     const actualOk = as_ && (af || es);
+
+    const barColor = t.is_critical ? "#EF4444" : t.status === "TK_Complete" ? "#059669" : "#2563EB";
 
     return (
       <div className="relative h-5">
         {barsOk && (
-          <div
-            className="absolute h-2 top-1.5 rounded-sm bg-slate-600/40"
-            style={{ left: `${pct(ps)}%`, width: `${pct(pf) - pct(ps)}%` }}
-          />
+          <div className="absolute h-2 top-1.5 rounded-sm"
+            style={{ left: `${pct(ps)}%`, width: `${pct(pf) - pct(ps)}%`, background: "var(--border-md)" }} />
         )}
         {actualOk && (
-          <div
-            className={`absolute h-3.5 top-0.5 rounded-sm ${t.is_critical ? "bg-red-500" : t.status === "TK_Complete" ? "bg-emerald-500" : "bg-blue-500"}`}
+          <div className="absolute h-3.5 top-0.5 rounded-sm"
             style={{
               left: `${pct(as_)}%`,
               width: `${Math.max(0.4, pct(af || ef || (ddMs > as_ ? ddMs : as_ + 86400000)) - pct(as_))}%`,
-              opacity: t.status === "TK_NotStart" ? 0.35 : 0.8,
-            }}
-          />
+              background: barColor,
+              opacity: t.status === "TK_NotStart" ? 0.35 : 0.85,
+            }} />
         )}
         {!actualOk && es && ef && (
-          <div
-            className={`absolute h-2 top-1.5 rounded-sm border ${t.is_critical ? "border-red-500/40 bg-red-500/10" : "border-blue-500/30 bg-blue-500/10"}`}
-            style={{ left: `${pct(es)}%`, width: `${Math.max(0.4, pct(ef) - pct(es))}%` }}
-          />
+          <div className="absolute h-2 top-1.5 rounded-sm"
+            style={{
+              left: `${pct(es)}%`,
+              width: `${Math.max(0.4, pct(ef) - pct(es))}%`,
+              background: t.is_critical ? "rgba(239,68,68,0.15)" : "rgba(37,99,235,0.12)",
+              border: `1px solid ${t.is_critical ? "rgba(239,68,68,0.35)" : "rgba(37,99,235,0.25)"}`,
+            }} />
         )}
       </div>
     );
@@ -126,75 +115,80 @@ export default function GanttChart({ data }: Props) {
   const ddLeft = pct(ddMs);
 
   return (
-    <div className="bg-[#0D1829] rounded-2xl border border-white/[0.07] shadow-xl shadow-black/30 overflow-hidden">
+    <div className="rounded-2xl overflow-hidden"
+      style={{ background: "var(--bg-card)", border: "1px solid var(--border)", boxShadow: "0 2px 8px rgba(13,27,62,0.06)" }}>
 
-      {/* Section header — always visible, click to expand */}
+      {/* Section header */}
       <button
         onClick={() => setChartOpen((o) => !o)}
-        className="w-full px-6 py-4 flex items-center justify-between gap-4 hover:bg-white/[0.02] transition-colors text-left"
+        className="w-full px-6 py-4 flex items-center justify-between gap-4 text-left transition-colors"
+        style={{ borderBottom: chartOpen ? "1px solid var(--border)" : "none" }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-card2)")}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
       >
         <div className="flex items-center gap-3">
-          <svg className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${chartOpen ? "rotate-90" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className={`w-4 h-4 transition-transform duration-200 ${chartOpen ? "rotate-90" : ""}`}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "var(--text-muted)" }}>
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
           <div>
-            <h3 className="text-sm font-bold text-slate-200">WBS Gantt Chart</h3>
-            <p className="text-xs text-slate-500 mt-0.5">{tasks.length} activities · {visible.length} shown at Level {levelFilter}</p>
+            <h3 className="font-bold" style={{ fontSize: 14, color: "var(--text-primary)" }}>WBS Gantt Chart</h3>
+            <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+              {tasks.length} activities · {visible.length} shown at Level {levelFilter}
+            </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-slate-600 bg-white/[0.04] px-2.5 py-1 rounded-full border border-white/[0.06]">
-            {chartOpen ? "Click to collapse" : "Click to expand"}
-          </span>
-        </div>
+        <span className="rounded-full px-3 py-1" style={{ fontSize: 10, color: "var(--text-muted)", background: "var(--bg-raised)", border: "1px solid var(--border)" }}>
+          {chartOpen ? "Collapse" : "Expand"}
+        </span>
       </button>
 
-      {/* Expanded content */}
       {chartOpen && (
         <>
           {/* Controls */}
-          <div className="px-6 pb-4 border-b border-white/[0.06] flex items-center gap-3 flex-wrap">
+          <div className="px-6 py-3 flex items-center gap-3 flex-wrap" style={{ borderBottom: "1px solid var(--border)", background: "var(--bg-card2)" }}>
 
-            {/* WBS Level filter */}
+            {/* Level filter */}
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wide mr-1">Level:</span>
+              <span className="font-semibold uppercase tracking-wide mr-1" style={{ fontSize: 10, color: "var(--text-muted)" }}>Level:</span>
               {uniqueLevels.map((lvl) => (
-                <button
-                  key={lvl}
-                  onClick={() => setLevelFilter(lvl)}
-                  className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-all ${
-                    levelFilter === lvl
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30"
-                      : "bg-white/[0.04] text-slate-500 hover:bg-white/[0.08] border border-white/[0.06]"
-                  }`}
-                >
+                <button key={lvl} onClick={() => setLevelFilter(lvl)}
+                  className="font-semibold px-2.5 py-1 rounded-lg transition-all"
+                  style={{
+                    fontSize: 10,
+                    background: levelFilter === lvl ? "var(--primary)" : "var(--bg-card)",
+                    color: levelFilter === lvl ? "#fff" : "var(--text-secondary)",
+                    border: `1px solid ${levelFilter === lvl ? "var(--primary)" : "var(--border)"}`,
+                    boxShadow: levelFilter === lvl ? "0 2px 8px rgba(30,64,175,0.2)" : "none",
+                  }}>
                   L{lvl}
                 </button>
               ))}
-              <button
-                onClick={() => setLevelFilter(maxWbsLevel + 1)}
-                className={`text-[10px] font-semibold px-2.5 py-1 rounded-lg transition-all ${
-                  levelFilter > maxWbsLevel
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-900/30"
-                    : "bg-white/[0.04] text-slate-500 hover:bg-white/[0.08] border border-white/[0.06]"
-                }`}
-              >
+              <button onClick={() => setLevelFilter(maxWbsLevel + 1)}
+                className="font-semibold px-2.5 py-1 rounded-lg transition-all"
+                style={{
+                  fontSize: 10,
+                  background: levelFilter > maxWbsLevel ? "var(--primary)" : "var(--bg-card)",
+                  color: levelFilter > maxWbsLevel ? "#fff" : "var(--text-secondary)",
+                  border: `1px solid ${levelFilter > maxWbsLevel ? "var(--primary)" : "var(--border)"}`,
+                  boxShadow: levelFilter > maxWbsLevel ? "0 2px 8px rgba(30,64,175,0.2)" : "none",
+                }}>
                 All
               </button>
             </div>
 
-            {/* Collapse / Expand all */}
+            {/* Collapse / Expand */}
             <div className="flex items-center gap-1">
-              <button
-                onClick={collapseAll}
-                className="text-[10px] text-slate-500 hover:text-slate-300 border border-white/[0.07] bg-white/[0.03] px-2.5 py-1 rounded-lg transition-all"
-              >
+              <button onClick={collapseAll} className="rounded-lg px-2.5 py-1 transition-colors"
+                style={{ fontSize: 10, color: "var(--text-secondary)", border: "1px solid var(--border)", background: "var(--bg-card)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-raised)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "var(--bg-card)")}>
                 Collapse All
               </button>
-              <button
-                onClick={expandAll}
-                className="text-[10px] text-slate-500 hover:text-slate-300 border border-white/[0.07] bg-white/[0.03] px-2.5 py-1 rounded-lg transition-all"
-              >
+              <button onClick={expandAll} className="rounded-lg px-2.5 py-1 transition-colors"
+                style={{ fontSize: 10, color: "var(--text-secondary)", border: "1px solid var(--border)", background: "var(--bg-card)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-raised)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "var(--bg-card)")}>
                 Expand All
               </button>
             </div>
@@ -203,40 +197,53 @@ export default function GanttChart({ data }: Props) {
             <input
               value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Search activities…"
-              className="text-xs bg-white/[0.04] border border-white/[0.1] rounded-lg px-3 py-1.5 outline-none focus:border-blue-500/40 text-slate-300 placeholder-slate-600 w-44 ml-auto"
+              className="rounded-lg outline-none ml-auto"
+              style={{
+                fontSize: 12, padding: "6px 12px", width: 176,
+                border: "1px solid var(--border-md)", background: "var(--bg-card)",
+                color: "var(--text-primary)", fontFamily: "inherit",
+              }}
+              onFocus={(e) => (e.target.style.borderColor = "var(--primary)")}
+              onBlur={(e) => (e.target.style.borderColor = "var(--border-md)")}
             />
 
             {/* Legend */}
-            <div className="flex items-center gap-3 text-[10px] text-slate-500">
-              <span className="flex items-center gap-1"><span className="w-4 h-1.5 bg-slate-600/50 rounded-sm inline-block" />Planned</span>
-              <span className="flex items-center gap-1"><span className="w-4 h-2 bg-blue-500/70 rounded-sm inline-block" />Actual</span>
-              <span className="flex items-center gap-1"><span className="w-4 h-2 bg-red-500 rounded-sm inline-block opacity-80" />Critical</span>
+            <div className="flex items-center gap-3" style={{ fontSize: 10, color: "var(--text-muted)" }}>
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-4 h-1.5 rounded-sm" style={{ background: "var(--border-md)" }} />Planned
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-4 h-2 rounded-sm" style={{ background: "#2563EB", opacity: 0.8 }} />Actual
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="inline-block w-4 h-2 rounded-sm" style={{ background: "#EF4444", opacity: 0.8 }} />Critical
+              </span>
             </div>
           </div>
 
-          {/* Chart area */}
+          {/* Chart */}
           <div className="overflow-x-auto">
             <div style={{ minWidth: 900 }}>
               {/* Timeline header */}
-              <div className="flex border-b border-white/[0.06] bg-white/[0.01]" style={{ height: 28 }}>
-                <div className="w-64 shrink-0 border-r border-white/[0.06]" />
+              <div className="flex" style={{ height: 28, borderBottom: "1px solid var(--border)", background: "var(--bg-card2)" }}>
+                <div className="shrink-0" style={{ width: 256, borderRight: "1px solid var(--border)" }} />
                 <div className="flex-1 relative">
                   {monthMarkers.map((m, i) => (
                     <div key={i} className="absolute top-0 bottom-0 flex items-center" style={{ left: `${m.left}%` }}>
-                      <span className="text-[9px] text-slate-600 pl-1 whitespace-nowrap">{m.label}</span>
-                      <div className="absolute top-0 bottom-0 left-0 w-px bg-white/[0.05]" />
+                      <span style={{ fontSize: 9, color: "var(--text-muted)", paddingLeft: 4, whiteSpace: "nowrap" }}>{m.label}</span>
+                      <div className="absolute top-0 bottom-0 left-0 w-px" style={{ background: "var(--border)" }} />
                     </div>
                   ))}
                   {ddLeft > 0 && ddLeft < 100 && (
-                    <div className="absolute top-0 bottom-0 w-0.5 bg-blue-500/50 z-10" style={{ left: `${ddLeft}%` }}>
-                      <span className="absolute -top-0 left-1 text-[8px] text-blue-400 font-bold whitespace-nowrap">Data Date</span>
+                    <div className="absolute top-0 bottom-0 z-10" style={{ left: `${ddLeft}%`, width: 2, background: "var(--primary)", opacity: 0.6 }}>
+                      <span className="absolute -top-0 left-1 font-bold whitespace-nowrap" style={{ fontSize: 8, color: "var(--primary)" }}>Data Date</span>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Rows */}
-              <div className="divide-y divide-white/[0.04]">
+              <div>
                 {(() => {
                   let lastWbs = "";
                   const rows: React.ReactNode[] = [];
@@ -244,20 +251,20 @@ export default function GanttChart({ data }: Props) {
                     if (t.wbs_id !== lastWbs) {
                       lastWbs = t.wbs_id;
                       const isCollapsed = collapsedWbs.has(t.wbs_id);
-                      const wbsCount   = tasks.filter((x) => x.wbs_id === t.wbs_id && x.wbs_level <= levelFilter).length;
+                      const wbsCount = tasks.filter((x) => x.wbs_id === t.wbs_id && x.wbs_level <= levelFilter).length;
                       rows.push(
-                        <div
-                          key={`wbs-${t.wbs_id}`}
-                          onClick={() => toggleWbs(t.wbs_id)}
-                          className="flex items-center bg-white/[0.02] hover:bg-white/[0.04] cursor-pointer border-b border-white/[0.05] transition-colors"
-                          style={{ height: 26 }}
-                        >
-                          <div className="w-64 shrink-0 px-3 flex items-center gap-1.5 border-r border-white/[0.05]">
-                            <svg className={`w-3 h-3 text-slate-500 transition-transform ${isCollapsed ? "" : "rotate-90"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div key={`wbs-${t.wbs_id}`} onClick={() => toggleWbs(t.wbs_id)}
+                          className="flex items-center cursor-pointer transition-colors"
+                          style={{ height: 26, borderBottom: "1px solid var(--border)", background: "var(--bg-card2)" }}
+                          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-raised)")}
+                          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--bg-card2)")}>
+                          <div className="shrink-0 px-3 flex items-center gap-1.5" style={{ width: 256, borderRight: "1px solid var(--border)" }}>
+                            <svg className={`w-3 h-3 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                              fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "var(--text-muted)" }}>
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                             </svg>
-                            <span className="text-[10px] font-bold text-slate-400 truncate">{t.wbs_name || t.wbs_path}</span>
-                            <span className="text-[9px] text-slate-600 shrink-0">({wbsCount})</span>
+                            <span className="font-bold truncate" style={{ fontSize: 10, color: "var(--text-secondary)" }}>{t.wbs_name || t.wbs_path}</span>
+                            <span className="shrink-0" style={{ fontSize: 9, color: "var(--text-muted)" }}>({wbsCount})</span>
                           </div>
                           <div className="flex-1 relative" style={{ height: 26 }} />
                         </div>
@@ -265,24 +272,30 @@ export default function GanttChart({ data }: Props) {
                     }
 
                     rows.push(
-                      <div key={t.id} className="flex items-center hover:bg-blue-500/[0.03] transition-colors group" style={{ height: 32 }}>
-                        <div className="w-64 shrink-0 px-3 border-r border-white/[0.04] flex items-center gap-2">
-                          <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${t.is_critical ? "bg-red-500" : t.status === "TK_Complete" ? "bg-emerald-500" : t.status === "TK_Active" ? "bg-blue-500" : "bg-slate-600"}`} />
+                      <div key={t.id} className="flex items-center group transition-colors"
+                        style={{ height: 32, borderBottom: "1px solid var(--border)" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--primary-light)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                        <div className="shrink-0 px-3 flex items-center gap-2" style={{ width: 256, borderRight: "1px solid var(--border)" }}>
+                          <div className="w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ background: t.is_critical ? "#EF4444" : t.status === "TK_Complete" ? "#059669" : t.status === "TK_Active" ? "#2563EB" : "#CBD5E1" }} />
                           <div className="min-w-0">
-                            <p className="text-[10px] font-medium text-slate-400 truncate leading-tight">{t.name}</p>
-                            <p className="text-[9px] text-slate-600 font-mono">{t.code}</p>
+                            <p className="font-medium truncate leading-tight" style={{ fontSize: 10, color: "var(--text-primary)" }}>{t.name}</p>
+                            <p style={{ fontSize: 9, color: "var(--text-muted)", fontFamily: "monospace" }}>{t.code}</p>
                           </div>
                         </div>
                         <div className="flex-1 px-1 relative">
                           <TaskBar t={t} />
                           {ddLeft > 0 && ddLeft < 100 && (
-                            <div className="absolute top-0 bottom-0 w-px bg-blue-500/20 pointer-events-none" style={{ left: `${ddLeft}%` }} />
+                            <div className="absolute top-0 bottom-0 w-px pointer-events-none"
+                              style={{ left: `${ddLeft}%`, background: "var(--primary)", opacity: 0.2 }} />
                           )}
                         </div>
-                        <div className="absolute right-2 hidden group-hover:flex items-center gap-2 bg-[#0A1220] border border-white/[0.1] text-slate-300 text-[9px] px-2 py-1 rounded-lg shadow-2xl pointer-events-none z-20 whitespace-nowrap">
+                        <div className="absolute right-2 hidden group-hover:flex items-center gap-2 rounded-lg px-2 py-1 pointer-events-none z-20 whitespace-nowrap shadow-lg"
+                          style={{ background: "var(--bg-nav)", border: "1px solid rgba(255,255,255,0.08)", fontSize: 9, color: "#E2E8F0" }}>
                           <span>{t.pct_complete.toFixed(0)}% · {STATUS_LABEL[t.status] ?? t.status}</span>
-                          {t.is_critical && <span className="text-red-400 font-bold">CRITICAL</span>}
-                          <span className="text-slate-600">{t.total_float_days}d float</span>
+                          {t.is_critical && <span style={{ color: "#F87171", fontWeight: 700 }}>CRITICAL</span>}
+                          <span style={{ color: "#64748B" }}>{t.total_float_days}d float</span>
                         </div>
                       </div>
                     );
@@ -294,7 +307,7 @@ export default function GanttChart({ data }: Props) {
           </div>
 
           {visible.length === 0 && (
-            <div className="py-10 text-center text-sm text-slate-600">
+            <div className="py-10 text-center" style={{ fontSize: 14, color: "var(--text-muted)" }}>
               {search ? "No activities match your search." : "No activities at this level."}
             </div>
           )}

@@ -77,18 +77,20 @@ export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewA
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#080E1C] text-white border-r border-white/[0.06]">
+    <div className="flex flex-col h-full" style={{ background: "var(--bg-card)", borderRight: "1px solid var(--border)" }}>
 
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 border-b border-white/[0.07] shrink-0">
+      <div className="px-4 pt-4 pb-3 shrink-0" style={{ borderBottom: "1px solid var(--border)" }}>
         <div className="flex items-center justify-between mb-3">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">History</p>
-          <span className="text-[10px] text-slate-700 tabular-nums">{total} saved</span>
+          <p className="font-bold uppercase tracking-widest" style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: "0.1em" }}>History</p>
+          <span className="tabular-nums" style={{ fontSize: 10, color: "var(--text-muted)" }}>{total} saved</span>
         </div>
         <button
           onClick={onNewAnalysis}
-          className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-2 rounded-lg transition-all hover:shadow-lg hover:shadow-blue-900/30"
-        >
+          className="w-full flex items-center justify-center gap-2 font-semibold py-2 rounded-lg transition-all text-white text-xs"
+          style={{ background: "var(--primary)", boxShadow: "0 2px 8px rgba(30,64,175,0.2)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--primary-hover)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--primary)")}>
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
@@ -96,13 +98,18 @@ export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewA
         </button>
 
         {/* Filter tabs */}
-        <div className="flex gap-1 mt-2">
+        <div className="flex gap-1 mt-2 p-0.5 rounded-lg" style={{ background: "var(--bg-raised)" }}>
           {(["", "baseline", "update"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
-              className={`flex-1 text-[10px] py-1 rounded-md font-semibold transition-colors ${filter === f ? "bg-white/[0.1] text-slate-200" : "text-slate-600 hover:text-slate-400"}`}
-            >
+              className="flex-1 py-1 rounded-md font-semibold transition-colors text-center"
+              style={{
+                fontSize: 10,
+                background: filter === f ? "var(--bg-card)" : "transparent",
+                color: filter === f ? "var(--text-primary)" : "var(--text-muted)",
+                boxShadow: filter === f ? "0 1px 3px rgba(13,27,62,0.08)" : "none",
+              }}>
               {f === "" ? "All" : f === "baseline" ? "Baseline" : "Updates"}
             </button>
           ))}
@@ -113,15 +120,16 @@ export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewA
       <div className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-5 h-5 border-2 border-blue-500/30 border-t-blue-400 rounded-full animate-spin" />
+            <div className="w-5 h-5 rounded-full border-2 border-t-blue-600 animate-spin"
+              style={{ borderColor: "var(--border)", borderTopColor: "var(--primary)" }} />
           </div>
         ) : items.length === 0 ? (
           <div className="px-4 py-10 text-center">
-            <p className="text-slate-600 text-xs">No analyses yet.</p>
-            <p className="text-slate-700 text-[10px] mt-1">Upload XER files to get started.</p>
+            <p style={{ fontSize: 12, color: "var(--text-muted)" }}>No analyses yet.</p>
+            <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4, opacity: 0.7 }}>Upload XER files to get started.</p>
           </div>
         ) : (
-          <div className="divide-y divide-white/[0.04]">
+          <div>
             {items.map((item) => {
               const isActive = item.id === currentAnalysisId;
               const displayName = item.project_name || item.filenames[0] || "Unnamed";
@@ -130,11 +138,17 @@ export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewA
                 <div
                   key={item.id}
                   onClick={() => onSelect(item.id)}
-                  className={`px-4 py-3 cursor-pointer transition-all group ${isActive ? "bg-blue-600/[0.12] border-l-2 border-blue-500" : "hover:bg-white/[0.03] border-l-2 border-transparent"}`}
+                  className="px-4 py-3 cursor-pointer transition-all group"
+                  style={{
+                    borderBottom: "1px solid var(--border)",
+                    borderLeft: `3px solid ${isActive ? "var(--primary)" : "transparent"}`,
+                    background: isActive ? "var(--primary-light)" : "transparent",
+                  }}
+                  onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "var(--bg-card2)"; }}
+                  onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      {/* Rename mode */}
                       {renamingId === item.id ? (
                         <div onClick={(e) => e.stopPropagation()}>
                           <input
@@ -146,40 +160,43 @@ export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewA
                               if (e.key === "Escape") setRenamingId(null);
                             }}
                             onBlur={() => saveRename(item.id)}
-                            className="w-full bg-white/[0.07] text-slate-200 text-xs px-2 py-1 rounded outline-none border border-blue-500/40 placeholder-slate-700"
+                            className="w-full rounded outline-none px-2 py-1"
+                            style={{ fontSize: 12, background: "var(--bg-raised)", border: "1px solid var(--primary)", color: "var(--text-primary)" }}
                           />
                         </div>
                       ) : (
                         <p
                           onDoubleClick={(e) => startRename(item, e)}
-                          className="text-xs font-semibold text-slate-300 truncate leading-tight cursor-text"
+                          className="font-semibold truncate leading-tight cursor-text"
+                          style={{ fontSize: 12, color: isActive ? "var(--primary)" : "var(--text-primary)" }}
                           title="Double-click to rename"
                         >
                           {displayName}
                         </p>
                       )}
-                      <p className="text-[10px] text-slate-600 mt-0.5">{timeAgo(item.created_at)}</p>
+                      <p style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{timeAgo(item.created_at)}</p>
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
-                      {/* Baseline / Update badge */}
                       <button
                         onClick={(e) => handleToggleType(item, e)}
                         title="Click to toggle type"
-                        className={`text-[9px] px-2 py-0.5 rounded-full font-semibold transition-colors whitespace-nowrap ${
-                          item.file_type === "baseline"
-                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                            : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
-                        }`}
-                      >
+                        className="font-semibold rounded-full px-2 py-0.5 transition-colors whitespace-nowrap"
+                        style={{
+                          fontSize: 9,
+                          background: item.file_type === "baseline" ? "var(--success-light)" : "var(--primary-light)",
+                          color: item.file_type === "baseline" ? "var(--success)" : "var(--primary)",
+                          border: `1px solid ${item.file_type === "baseline" ? "rgba(5,150,105,0.2)" : "rgba(30,64,175,0.15)"}`,
+                        }}>
                         {item.file_type === "baseline" ? "Baseline" : "Update"}
                       </button>
 
-                      {/* Delete */}
                       <button
                         onClick={(e) => handleDelete(item.id, e)}
-                        className="opacity-0 group-hover:opacity-100 text-slate-700 hover:text-red-400 transition-all p-0.5"
-                      >
+                        className="opacity-0 group-hover:opacity-100 transition-all p-0.5"
+                        style={{ color: "var(--text-muted)" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = "var(--danger)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}>
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                         </svg>
@@ -190,10 +207,11 @@ export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewA
                   {/* File names */}
                   <div className="mt-1.5 flex flex-wrap gap-1">
                     {item.filenames.slice(0, 2).map((f) => (
-                      <span key={f} className="text-[9px] bg-white/[0.04] text-slate-600 px-1.5 py-0.5 rounded font-mono truncate max-w-[120px]">{f}</span>
+                      <span key={f} className="truncate"
+                        style={{ fontSize: 9, background: "var(--bg-raised)", color: "var(--text-muted)", padding: "2px 5px", borderRadius: 4, fontFamily: "monospace", maxWidth: 120 }}>{f}</span>
                     ))}
                     {item.filenames.length > 2 && (
-                      <span className="text-[9px] text-slate-700">+{item.filenames.length - 2}</span>
+                      <span style={{ fontSize: 9, color: "var(--text-muted)" }}>+{item.filenames.length - 2}</span>
                     )}
                   </div>
 
@@ -206,12 +224,14 @@ export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewA
                         onChange={(e) => setEditNote(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") saveNote(item.id); if (e.key === "Escape") setEditingId(null); }}
                         placeholder="Add a note…"
-                        className="w-full bg-white/[0.07] text-slate-300 text-[10px] px-2 py-1 rounded outline-none border border-white/[0.1] placeholder-slate-700"
+                        className="w-full rounded outline-none px-2 py-1"
+                        style={{ fontSize: 11, background: "var(--bg-raised)", border: "1px solid var(--border-md)", color: "var(--text-secondary)" }}
                       />
                     </div>
                   ) : item.notes ? (
                     <p
-                      className="mt-1.5 text-[10px] text-slate-600 italic cursor-text"
+                      className="mt-1.5 italic cursor-text"
+                      style={{ fontSize: 10, color: "var(--text-muted)" }}
                       onClick={(e) => { e.stopPropagation(); setEditingId(item.id); setEditNote(item.notes ?? ""); }}
                     >
                       {item.notes}
@@ -219,8 +239,8 @@ export default function FileHistorySidebar({ currentAnalysisId, onSelect, onNewA
                   ) : (
                     <button
                       onClick={(e) => { e.stopPropagation(); setEditingId(item.id); setEditNote(""); }}
-                      className="mt-1 text-[9px] text-slate-700 hover:text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
+                      className="mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ fontSize: 9, color: "var(--text-muted)" }}>
                       + Add note
                     </button>
                   )}

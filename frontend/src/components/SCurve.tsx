@@ -50,20 +50,23 @@ export default function SCurve({ data }: { data: SCurveData }) {
   }) => {
     if (!active || !payload?.length) return null;
     return (
-      <div className="bg-[#0A1220] border border-white/[0.1] shadow-2xl rounded-xl p-3 text-xs min-w-36">
+      <div className="rounded-xl p-3 min-w-36"
+        style={{ background: "#FFFFFF", border: "1px solid var(--border-md)", boxShadow: "0 8px 32px rgba(13,27,62,0.12)", fontSize: 12 }}>
         <div className="flex items-center gap-2 mb-2">
-          <p className="font-semibold text-slate-300">{label}</p>
+          <p className="font-semibold" style={{ color: "var(--text-primary)" }}>{label}</p>
           {label === ddStr && (
-            <span className="text-[9px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30 px-1.5 py-0.5 rounded">Data Date</span>
+            <span className="font-bold rounded px-1.5 py-0.5" style={{ fontSize: 9, background: "var(--primary-light)", color: "var(--primary)", border: "1px solid rgba(30,64,175,0.2)" }}>
+              Data Date
+            </span>
           )}
         </div>
         {payload.map((p) => (
           <div key={p.name} className="flex items-center justify-between gap-4 py-0.5">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full" style={{ background: p.color }} />
-              <span className="text-slate-500">{p.name}</span>
+              <span style={{ color: "var(--text-muted)" }}>{p.name}</span>
             </div>
-            <span className="font-bold text-slate-200">{p.value?.toFixed(1)}%</span>
+            <span className="font-bold" style={{ color: "var(--text-primary)" }}>{p.value?.toFixed(1)}%</span>
           </div>
         ))}
       </div>
@@ -71,16 +74,18 @@ export default function SCurve({ data }: { data: SCurveData }) {
   };
 
   return (
-    <div className="bg-[#0D1829] rounded-2xl border border-white/[0.07] shadow-xl shadow-black/30">
-      <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+    <div className="rounded-2xl overflow-hidden"
+      style={{ background: "var(--bg-card)", border: "1px solid var(--border)", boxShadow: "0 2px 8px rgba(13,27,62,0.06)" }}>
+      <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
         <div>
-          <h3 className="text-sm font-bold text-slate-200">Progress S-Curve</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Cumulative % complete — Baseline vs Actual vs Forecast</p>
+          <h3 className="font-bold" style={{ fontSize: 14, color: "var(--text-primary)" }}>Progress S-Curve</h3>
+          <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Cumulative % complete — Baseline vs Actual vs Forecast</p>
         </div>
         {ddStr && (
-          <div className="flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 px-3 py-1.5 rounded-lg shrink-0">
-            <div className="w-3 h-0.5 bg-blue-500 inline-block" />
-            <span className="text-xs text-blue-400 font-semibold">Data Date: {ddStr}</span>
+          <div className="flex items-center gap-2 rounded-lg px-3 py-1.5 shrink-0"
+            style={{ background: "var(--primary-light)", border: "1px solid rgba(30,64,175,0.15)" }}>
+            <div className="w-3 h-0.5 inline-block" style={{ background: "var(--primary)" }} />
+            <span className="font-semibold" style={{ fontSize: 12, color: "var(--primary)" }}>Data Date: {ddStr}</span>
           </div>
         )}
       </div>
@@ -90,21 +95,16 @@ export default function SCurve({ data }: { data: SCurveData }) {
           <ComposedChart data={thinned} margin={{ top: 10, right: 40, left: 0, bottom: 20 }}>
             <defs>
               <linearGradient id="baselineGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#64748B" stopOpacity={0.15} />
-                <stop offset="95%" stopColor="#64748B" stopOpacity={0} />
+                <stop offset="5%"  stopColor="#94A3B8" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="#94A3B8" stopOpacity={0} />
               </linearGradient>
-              <filter id="glowBlue">
-                <feGaussianBlur stdDeviation="3" result="blur" />
-                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-              </filter>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.08)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 9, fill: "#475569" }}
+              tick={{ fontSize: 9, fill: "var(--text-muted)" }}
               axisLine={false} tickLine={false}
-              interval={0}
-              angle={-45} textAnchor="end" height={56}
+              interval={0} angle={-45} textAnchor="end" height={56}
               tickFormatter={(val: string) => {
                 if (!val) return "";
                 const [y, m] = val.split("-");
@@ -114,28 +114,25 @@ export default function SCurve({ data }: { data: SCurveData }) {
             />
             <YAxis
               tickFormatter={(v) => `${v}%`}
-              tick={{ fontSize: 10, fill: "#475569" }}
+              tick={{ fontSize: 10, fill: "var(--text-muted)" }}
               axisLine={false} tickLine={false}
-              domain={[minVal, 100]}
-              width={38}
+              domain={[minVal, 100]} width={38}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend
               wrapperStyle={{ fontSize: 11, paddingTop: 16 }}
-              formatter={(v) => <span style={{ color: "#64748B" }}>{v}</span>}
+              formatter={(v) => <span style={{ color: "var(--text-secondary)" }}>{v}</span>}
             />
-
-            <Area   type="monotone" dataKey="Baseline" stroke="#475569" strokeWidth={1.5} fill="url(#baselineGrad)" dot={false} />
-            <Line   type="monotone" dataKey="Actual"   stroke="#3B82F6" strokeWidth={2.5} dot={false} strokeDasharray="6 3" />
+            <Area   type="monotone" dataKey="Baseline" stroke="#94A3B8" strokeWidth={1.5} fill="url(#baselineGrad)" dot={false} />
+            <Line   type="monotone" dataKey="Actual"   stroke="#1E40AF" strokeWidth={2.5} dot={false} strokeDasharray="6 3" />
             <Line   type="monotone" dataKey="Forecast" stroke="#64748B" strokeWidth={1.5} dot={false} strokeDasharray="3 4" />
-
             {ddStr && ddInChart && (
               <ReferenceLine
                 x={ddStr}
-                stroke="#3B82F6"
+                stroke="#1E40AF"
                 strokeWidth={1.5}
-                strokeOpacity={0.7}
-                label={{ value: "Data Date ▲", position: "insideTopLeft", fontSize: 9, fill: "#3B82F6", fontWeight: 700 }}
+                strokeOpacity={0.5}
+                label={{ value: "Data Date ▲", position: "insideTopLeft", fontSize: 9, fill: "#1E40AF", fontWeight: 700 }}
               />
             )}
           </ComposedChart>

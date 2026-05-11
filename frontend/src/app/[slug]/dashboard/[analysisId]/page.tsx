@@ -36,7 +36,7 @@ function AnalysisDashboardInner() {
   const router = useRouter();
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [company, setCompany] = useState<CompanyInfo | null>(null);
-  const [active, setActive] = useState("kpi");
+  const [active, setActive] = useState("executive");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const user = getUser();
 
@@ -69,14 +69,18 @@ function AnalysisDashboardInner() {
 
   if (!result) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-app,#070C18)]">
-        <div className="w-8 h-8 border-2 border-blue-500/40 border-t-blue-400 rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-app)" }}>
+        <div className="text-center">
+          <div className="w-10 h-10 rounded-full border-2 border-t-blue-600 animate-spin mx-auto mb-3"
+            style={{ borderColor: "var(--border)", borderTopColor: "var(--primary)" }} />
+          <p style={{ fontSize: 13, color: "var(--text-muted)" }}>Loading analysis…</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-[var(--bg-app,#070C18)] overflow-hidden">
+    <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg-app)" }}>
 
       {/* History Sidebar */}
       <div className={`${sidebarOpen ? "w-64" : "w-0"} shrink-0 transition-all duration-300 overflow-hidden no-print`}>
@@ -90,23 +94,34 @@ function AnalysisDashboardInner() {
       </div>
 
       {/* Nav Sidebar */}
-      <div className="hidden lg:flex flex-col w-56 shrink-0 bg-slate-900 h-full no-print">
-        <div className="px-4 py-5 border-b border-white/10">
-          <div className="flex items-center gap-2.5 mb-3">
+      <div className="hidden lg:flex flex-col w-56 shrink-0 h-full no-print"
+        style={{ background: "var(--bg-nav)", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
+
+        {/* Logo + project */}
+        <div className="px-4 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+          <div className="flex items-center gap-2.5 mb-4">
             {company?.logo_url ? (
               <img src={company.logo_url} alt={company.name} className="h-7 w-auto object-contain" />
             ) : (
-              <img src="/plainview-logo.png" alt="PlainView" className="h-8 w-auto object-contain max-w-[100px]" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              <img src="/plainview-logo.png" alt="PlainView" className="h-7 w-auto object-contain max-w-[100px]"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
             )}
             <div className="min-w-0">
-              <p className="text-white text-xs font-bold leading-tight truncate">{company?.name || slug}</p>
-              <p className="text-white/30 text-[10px] truncate">{result.kpis?.project_name}</p>
+              <p className="font-bold truncate" style={{ fontSize: 12, color: "#E2E8F0", lineHeight: 1.3 }}>{company?.name || slug}</p>
+              <p className="truncate" style={{ fontSize: 10, color: "#475569" }}>{result.kpis?.project_name}</p>
             </div>
           </div>
+
           <button
             onClick={() => setSidebarOpen((o) => !o)}
-            className={`w-full flex items-center gap-2 text-[10px] font-semibold px-2 py-1.5 rounded-lg transition-colors ${sidebarOpen ? "bg-blue-600/20 text-blue-400" : "text-white/40 hover:text-white/70 hover:bg-white/5"}`}
-          >
+            className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors"
+            style={{
+              fontSize: 10, fontWeight: 600,
+              background: sidebarOpen ? "rgba(96,165,250,0.12)" : "transparent",
+              color: sidebarOpen ? "#93C5FD" : "#64748B",
+            }}
+            onMouseEnter={(e) => { if (!sidebarOpen) { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; } }}
+            onMouseLeave={(e) => { if (!sidebarOpen) { e.currentTarget.style.background = "transparent"; } }}>
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -114,13 +129,19 @@ function AnalysisDashboardInner() {
           </button>
         </div>
 
+        {/* Nav links */}
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
           {NAV.map((item) => (
             <button
               key={item.id}
               onClick={() => document.getElementById(item.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left text-xs font-medium transition-all ${active === item.id ? "bg-blue-600 text-white" : "text-white/50 hover:text-white hover:bg-white/5"}`}
-            >
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left font-medium transition-all"
+              style={{
+                fontSize: 12,
+                background: active === item.id ? "rgba(96,165,250,0.15)" : "transparent",
+                color: active === item.id ? "#93C5FD" : "#64748B",
+                borderLeft: active === item.id ? "2px solid #60A5FA" : "2px solid transparent",
+              }}>
               <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
               </svg>
@@ -129,30 +150,42 @@ function AnalysisDashboardInner() {
           ))}
         </nav>
 
-        <div className="px-4 py-3 border-t border-white/10 shrink-0 flex items-center justify-between">
-          <p className="text-white/30 text-[10px] truncate">{user?.name || user?.email}</p>
+        {/* Footer */}
+        <div className="px-4 py-3 shrink-0 flex items-center justify-between"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+          <p className="truncate" style={{ fontSize: 10, color: "#475569" }}>{user?.name || user?.email}</p>
           <div className="flex gap-2 items-center">
             {user?.role === "admin" && (
-              <a href="/admin" className="text-white/30 hover:text-amber-400 transition-colors" title="Admin Panel">
+              <a href="/admin" style={{ color: "#475569" }} title="Admin Panel"
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#F59E0B")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </a>
             )}
-            <button onClick={() => window.print()} className="text-white/30 hover:text-white/60 transition-colors">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+            <button onClick={() => window.print()} style={{ color: "#475569" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#94A3B8")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+              </svg>
             </button>
-            <button onClick={() => { clearToken(); router.replace("/login"); }} className="text-white/30 hover:text-white/60 transition-colors">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+            <button onClick={() => { clearToken(); router.replace("/login"); }} style={{ color: "#475569" }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = "#94A3B8")}
+              onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
             </button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-[var(--bg-app,#070C18)]">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+      <main className="flex-1 overflow-y-auto" style={{ background: "var(--bg-app)" }}>
+        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           <section id="executive"><ExecutiveSummary kpis={result.kpis} observations={result.observations} spi_by_contractor={result.spi_by_contractor} milestones={result.milestones} float_erosion={result.float_erosion} /></section>
           <section id="kpi"><KPISummary kpis={result.kpis} /></section>
           <section id="observations"><ObservationsPanel observations={result.observations} /></section>
@@ -174,7 +207,7 @@ function AnalysisDashboardInner() {
           </section>
           <section id="milestones"><MilestoneTracker data={result.milestones} /></section>
           <section id="critical"><CriticalPath data={result.critical_path} /></section>
-          <div className="pb-20" />
+          <div className="pb-24" />
         </div>
       </main>
 

@@ -6,21 +6,21 @@ import {
 import { SPIContractor } from "@/lib/api";
 
 function spiColor(spi: number) {
-  if (spi >= 0.95) return "#10B981";
-  if (spi >= 0.80) return "#F59E0B";
-  return "#EF4444";
+  if (spi >= 0.95) return "#059669";
+  if (spi >= 0.80) return "#D97706";
+  return "#DC2626";
 }
 
-function spiBg(spi: number) {
-  if (spi >= 0.95) return "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
-  if (spi >= 0.80) return "bg-amber-500/10 text-amber-400 border border-amber-500/20";
-  return "bg-red-500/10 text-red-400 border border-red-500/20";
+function spiBg(spi: number): React.CSSProperties {
+  if (spi >= 0.95) return { background: "var(--success-light)", color: "var(--success)", border: "1px solid rgba(5,150,105,0.2)" };
+  if (spi >= 0.80) return { background: "var(--warn-light)",    color: "var(--warn)",    border: "1px solid rgba(217,119,6,0.2)" };
+  return             { background: "var(--danger-light)",   color: "var(--danger)",   border: "1px solid rgba(220,38,38,0.2)" };
 }
 
-function rankBadge(rank: number) {
-  if (rank === 1) return "bg-emerald-500/15 text-emerald-400";
-  if (rank === 2) return "bg-amber-500/15 text-amber-400";
-  return "bg-red-500/15 text-red-400";
+function rankStyle(rank: number): React.CSSProperties {
+  if (rank === 1) return { background: "var(--success-light)", color: "var(--success)" };
+  if (rank === 2) return { background: "var(--warn-light)",    color: "var(--warn)" };
+  return             { background: "var(--danger-light)",   color: "var(--danger)" };
 }
 
 function impact(spi: number, totalPV: number, pv: number): string {
@@ -43,17 +43,17 @@ export default function SPIByContractor({ data }: { data: SPIContractor[] }) {
     const d    = payload[0].payload;
     const rank = sorted.findIndex(r => r.contractor === d.contractor) + 1;
     return (
-      <div className="bg-[#0A1220] border border-white/[0.1] shadow-2xl rounded-xl p-3 text-xs">
+      <div className="rounded-xl p-3" style={{ background: "#FFFFFF", border: "1px solid var(--border-md)", boxShadow: "0 8px 32px rgba(13,27,62,0.12)", fontSize: 12 }}>
         <div className="flex items-center gap-2 mb-2">
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${rankBadge(rank)}`}>#{rank}</span>
-          <p className="font-bold text-slate-200">{d.contractor}</p>
+          <span className="font-bold px-1.5 py-0.5 rounded" style={{ fontSize: 10, ...rankStyle(rank) }}>#{rank}</span>
+          <p className="font-bold" style={{ color: "var(--text-primary)" }}>{d.contractor}</p>
         </div>
         <div className="space-y-1">
-          <div className="flex justify-between gap-6"><span className="text-slate-500">PV (planned)</span><span className="font-semibold text-slate-300">{d.pv.toLocaleString()}</span></div>
-          <div className="flex justify-between gap-6"><span className="text-slate-500">EV (earned)</span><span className="font-semibold text-slate-300">{d.ev.toLocaleString()}</span></div>
-          <div className="flex justify-between gap-6 pt-1 border-t border-white/[0.07]">
-            <span className="text-slate-400 font-semibold">SPI</span>
-            <span className={`font-bold ${d.spi >= 0.95 ? "text-emerald-400" : d.spi >= 0.80 ? "text-amber-400" : "text-red-400"}`}>{d.spi.toFixed(2)}</span>
+          <div className="flex justify-between gap-6"><span style={{ color: "var(--text-muted)" }}>PV (planned)</span><span className="font-semibold" style={{ color: "var(--text-primary)" }}>{d.pv.toLocaleString()}</span></div>
+          <div className="flex justify-between gap-6"><span style={{ color: "var(--text-muted)" }}>EV (earned)</span><span className="font-semibold" style={{ color: "var(--text-primary)" }}>{d.ev.toLocaleString()}</span></div>
+          <div className="flex justify-between gap-6 pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+            <span className="font-semibold" style={{ color: "var(--text-secondary)" }}>SPI</span>
+            <span className="font-bold" style={{ color: spiColor(d.spi) }}>{d.spi.toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -61,32 +61,35 @@ export default function SPIByContractor({ data }: { data: SPIContractor[] }) {
   };
 
   return (
-    <div className="bg-[#0D1829] rounded-2xl border border-white/[0.07] shadow-xl shadow-black/30 overflow-hidden">
-      <div className="px-6 py-4 border-b border-white/[0.06] flex items-center justify-between">
+    <div className="rounded-2xl overflow-hidden"
+      style={{ background: "var(--bg-card)", border: "1px solid var(--border)", boxShadow: "0 2px 8px rgba(13,27,62,0.06)" }}>
+      <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
         <div>
-          <h3 className="text-sm font-bold text-slate-200">Contractor Performance Ranking</h3>
-          <p className="text-xs text-slate-500 mt-0.5">Schedule Performance Index — ranked best to worst</p>
+          <h3 className="font-bold" style={{ fontSize: 14, color: "var(--text-primary)" }}>Contractor Performance Ranking</h3>
+          <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>Schedule Performance Index — ranked best to worst</p>
         </div>
-        <div className="flex items-center gap-3 text-[10px] text-slate-500">
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />≥ 0.95</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />0.80–0.95</span>
-          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" />{"< 0.80"}</span>
+        <div className="flex items-center gap-3" style={{ fontSize: 10, color: "var(--text-muted)" }}>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block" style={{ background: "#059669" }} />≥ 0.95</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block" style={{ background: "#D97706" }} />0.80–0.95</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full inline-block" style={{ background: "#DC2626" }} />{"< 0.80"}</span>
         </div>
       </div>
 
       {worst && worst.spi < 0.90 && (
-        <div className="mx-6 mt-4 flex items-start gap-3 bg-red-500/[0.06] border border-red-500/20 rounded-xl px-4 py-3">
-          <div className="w-2 h-2 rounded-full bg-red-500 shrink-0 mt-1" />
-          <p className="text-xs text-red-400 leading-relaxed">
+        <div className="mx-6 mt-4 flex items-start gap-3 rounded-xl px-4 py-3"
+          style={{ background: "var(--danger-light)", border: "1px solid rgba(220,38,38,0.2)" }}>
+          <div className="w-2 h-2 rounded-full shrink-0 mt-1" style={{ background: "var(--danger)" }} />
+          <p style={{ fontSize: 12, color: "var(--danger)", lineHeight: 1.6 }}>
             <span className="font-bold">{worst.contractor}</span> is the weakest performer (SPI {worst.spi.toFixed(2)}).{" "}
             {impact(worst.spi, totalPV, worst.pv)} Recovery plan should be reviewed immediately.
           </p>
         </div>
       )}
       {best && best.spi >= 0.95 && sorted.length > 1 && (
-        <div className="mx-6 mt-4 flex items-start gap-3 bg-emerald-500/[0.06] border border-emerald-500/20 rounded-xl px-4 py-3">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 mt-1" />
-          <p className="text-xs text-emerald-400 leading-relaxed">
+        <div className="mx-6 mt-4 flex items-start gap-3 rounded-xl px-4 py-3"
+          style={{ background: "var(--success-light)", border: "1px solid rgba(5,150,105,0.2)" }}>
+          <div className="w-2 h-2 rounded-full shrink-0 mt-1" style={{ background: "var(--success)" }} />
+          <p style={{ fontSize: 12, color: "var(--success)", lineHeight: 1.6 }}>
             <span className="font-bold">{best.contractor}</span> is the top performer with SPI {best.spi.toFixed(2)}.{" "}
             Their approach may offer lessons for underperforming contractors.
           </p>
@@ -96,11 +99,13 @@ export default function SPIByContractor({ data }: { data: SPIContractor[] }) {
       <div className="p-6">
         <ResponsiveContainer width="100%" height={Math.max(180, chartData.length * 40)}>
           <BarChart data={chartData} layout="vertical" margin={{ top: 0, right: 24, left: 90, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.08)" horizontal={false} />
-            <XAxis type="number" domain={[0, 1.2]} tickFormatter={(v) => v.toFixed(1)} tick={{ fontSize: 10, fill: "#475569" }} axisLine={false} tickLine={false} />
-            <YAxis type="category" dataKey="contractor" tick={{ fontSize: 10, fill: "#64748B" }} width={90} axisLine={false} tickLine={false} />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(255,255,255,0.02)" }} />
-            <ReferenceLine x={1} stroke="rgba(148,163,184,0.2)" strokeDasharray="4 3" />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+            <XAxis type="number" domain={[0, 1.2]} tickFormatter={(v) => v.toFixed(1)}
+              tick={{ fontSize: 10, fill: "var(--text-muted)" }} axisLine={false} tickLine={false} />
+            <YAxis type="category" dataKey="contractor"
+              tick={{ fontSize: 10, fill: "var(--text-secondary)" }} width={90} axisLine={false} tickLine={false} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(30,64,175,0.04)" }} />
+            <ReferenceLine x={1} stroke="var(--border-md)" strokeDasharray="4 3" />
             <Bar dataKey="spi" radius={[0, 4, 4, 0]} maxBarSize={16}>
               {chartData.map((entry, i) => <Cell key={i} fill={spiColor(entry.spi)} fillOpacity={0.85} />)}
             </Bar>
@@ -108,39 +113,35 @@ export default function SPIByContractor({ data }: { data: SPIContractor[] }) {
         </ResponsiveContainer>
 
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full" style={{ fontSize: 12 }}>
             <thead>
-              <tr className="border-b border-white/[0.06]">
-                <th className="text-left py-2 text-slate-500 font-semibold w-8">Rank</th>
-                <th className="text-left py-2 text-slate-500 font-semibold">Contractor</th>
-                <th className="text-right py-2 text-slate-500 font-semibold">PV</th>
-                <th className="text-right py-2 text-slate-500 font-semibold">EV</th>
-                <th className="text-right py-2 text-slate-500 font-semibold">SPI</th>
-                <th className="text-left py-2 text-slate-500 font-semibold pl-4">Impact</th>
+              <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                {["Rank", "Contractor", "PV", "EV", "SPI", "Impact"].map((h, i) => (
+                  <th key={h} className={i === 0 ? "py-2 w-8" : i === 5 ? "py-2 pl-4 text-left" : "py-2"} style={{ textAlign: i > 0 && i < 5 ? "right" : "left", fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>{h}</th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {sorted.map((row, i) => (
-                <tr key={i} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                <tr key={i} style={{ borderBottom: "1px solid var(--border)" }}>
                   <td className="py-2.5">
-                    <span className={`inline-flex items-center justify-center w-5 h-5 rounded-md text-[10px] font-bold ${rankBadge(i + 1)}`}>
-                      {i + 1}
-                    </span>
+                    <span className="inline-flex items-center justify-center w-5 h-5 rounded-md font-bold"
+                      style={{ fontSize: 10, ...rankStyle(i + 1) }}>{i + 1}</span>
                   </td>
-                  <td className="py-2.5 text-slate-300 font-medium">
+                  <td className="py-2.5 font-medium" style={{ color: "var(--text-primary)" }}>
                     {row.contractor}
                     {i === sorted.length - 1 && sorted.length > 1 && row.spi < 0.90 && (
-                      <span className="ml-2 text-[9px] font-bold bg-red-500/15 text-red-400 px-1.5 py-0.5 rounded">CRITICAL</span>
+                      <span className="ml-2 font-bold rounded px-1.5 py-0.5" style={{ fontSize: 9, background: "var(--danger-light)", color: "var(--danger)" }}>CRITICAL</span>
                     )}
                   </td>
-                  <td className="py-2.5 text-right text-slate-500">{row.pv.toLocaleString()}</td>
-                  <td className="py-2.5 text-right text-slate-500">{row.ev.toLocaleString()}</td>
+                  <td className="py-2.5 text-right" style={{ color: "var(--text-muted)" }}>{row.pv.toLocaleString()}</td>
+                  <td className="py-2.5 text-right" style={{ color: "var(--text-muted)" }}>{row.ev.toLocaleString()}</td>
                   <td className="py-2.5 text-right">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-lg font-bold text-[11px] ${spiBg(row.spi)}`}>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-lg font-bold" style={{ fontSize: 11, ...spiBg(row.spi) }}>
                       {row.spi.toFixed(2)}
                     </span>
                   </td>
-                  <td className="py-2.5 pl-4 text-slate-500 text-[10px] max-w-[160px]">
+                  <td className="py-2.5 pl-4 max-w-[160px]" style={{ fontSize: 10, color: "var(--text-muted)" }}>
                     {impact(row.spi, totalPV, row.pv)}
                   </td>
                 </tr>
