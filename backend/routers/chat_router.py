@@ -149,13 +149,16 @@ async def chat(
     messages.append({"role": "user", "content": body.message})
 
     # Call OpenAI
-    response = await client.chat.completions.create(
-        model="gpt-4o",
-        messages=messages,
-        max_tokens=1024,
-        temperature=0.3,
-    )
-    reply_text = response.choices[0].message.content
+    try:
+        response = await client.chat.completions.create(
+            model="gpt-4o",
+            messages=messages,
+            max_tokens=1024,
+            temperature=0.3,
+        )
+        reply_text = response.choices[0].message.content
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"AI service error: {str(exc)}")
 
     # Save user message + assistant reply
     user_msg = models.AIMessage(conversation_id=conversation.id, role="user", content=body.message)

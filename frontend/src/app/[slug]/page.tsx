@@ -226,7 +226,7 @@ export default function CompanyUploadPage() {
   const maxFilesLabel = fileType === "baseline" ? "1 .xer file" : "Up to 10 .xer files";
 
   return (
-    <main className="min-h-screen flex bg-[#070C18]">
+    <main className="min-h-screen flex bg-[#070C18]" data-theme="dark">
 
       {/* Duplicate Modal */}
       {duplicateInfo && (
@@ -285,11 +285,21 @@ export default function CompanyUploadPage() {
             <p className="text-slate-500 text-xs">{user?.name || user?.email}</p>
             <p className="text-slate-700 text-[10px]">{user?.role}</p>
           </div>
-          <button onClick={() => { clearToken(); router.replace("/login"); }} className="text-slate-600 hover:text-slate-400 transition-colors">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-3">
+            {user?.role === "admin" && (
+              <a href="/admin" className="text-slate-600 hover:text-amber-400 transition-colors" title="Admin Panel">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </a>
+            )}
+            <button onClick={() => { clearToken(); router.replace("/login"); }} className="text-slate-600 hover:text-slate-400 transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -351,13 +361,20 @@ export default function CompanyUploadPage() {
               <div className="px-4 pb-2 space-y-1.5">
                 {files.map((f) => (
                   <div key={f.name} className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.07] rounded-xl px-3 py-2.5">
-                    <div className="w-7 h-7 bg-blue-600/20 border border-blue-500/20 rounded-lg flex items-center justify-center shrink-0">
-                      <span className="text-blue-400 text-[8px] font-bold">XER</span>
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${fileType === "baseline" ? "bg-emerald-600/20 border border-emerald-500/20" : "bg-blue-600/20 border border-blue-500/20"}`}>
+                      <span className={`text-[8px] font-bold ${fileType === "baseline" ? "text-emerald-400" : "text-blue-400"}`}>XER</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-slate-300 truncate">{f.name}</p>
                       <p className="text-[10px] text-slate-600">{(f.size / 1024).toFixed(0)} KB</p>
                     </div>
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold shrink-0 ${
+                      fileType === "baseline"
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        : "bg-blue-500/10 text-blue-400 border border-blue-500/20"
+                    }`}>
+                      {fileType === "baseline" ? "Baseline" : "Update"}
+                    </span>
                     <button onClick={() => setFiles((p) => p.filter((x) => x.name !== f.name))} className="text-slate-600 hover:text-slate-400 transition-colors">
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

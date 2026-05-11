@@ -69,14 +69,14 @@ function AnalysisDashboardInner() {
 
   if (!result) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#070C18]">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-app,#070C18)]">
         <div className="w-8 h-8 border-2 border-blue-500/40 border-t-blue-400 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-[#070C18] overflow-hidden">
+    <div className="flex h-screen bg-[var(--bg-app,#070C18)] overflow-hidden">
 
       {/* History Sidebar */}
       <div className={`${sidebarOpen ? "w-64" : "w-0"} shrink-0 transition-all duration-300 overflow-hidden no-print`}>
@@ -151,7 +151,7 @@ function AnalysisDashboardInner() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto bg-[#070C18]">
+      <main className="flex-1 overflow-y-auto bg-[var(--bg-app,#070C18)]">
         <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
           <section id="executive"><ExecutiveSummary kpis={result.kpis} observations={result.observations} spi_by_contractor={result.spi_by_contractor} milestones={result.milestones} float_erosion={result.float_erosion} /></section>
           <section id="kpi"><KPISummary kpis={result.kpis} /></section>

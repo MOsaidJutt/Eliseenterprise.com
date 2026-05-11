@@ -33,14 +33,25 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex" style={{ background: "var(--bg-app)" }}>
+    /* Always dark — login is a branded page */
+    <main className="min-h-screen flex bg-[#070C18]">
 
       {/* Left branding panel */}
-      <div className="hidden lg:flex flex-col justify-between w-80 xl:w-96 bg-slate-900 border-r border-white/[0.07] p-10 text-white shrink-0">
+      <div className="hidden lg:flex flex-col justify-between w-80 xl:w-96 bg-[#0A1220] border-r border-white/[0.07] p-10 text-white shrink-0">
         <div>
-          <div className="flex items-center gap-3 mb-12">
-            <img src="/plainview-logo.png" alt="PlainView" className="h-9 w-auto object-contain"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+          {/* Logo */}
+          <div className="mb-12">
+            <img
+              src="/plainview-logo.png"
+              alt="PlainView"
+              className="h-10 w-auto object-contain object-left max-w-[200px]"
+              onError={(e) => {
+                const el = e.target as HTMLImageElement;
+                el.style.display = "none";
+                el.parentElement!.insertAdjacentHTML("afterbegin",
+                  '<div class="flex items-center gap-2.5"><div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center text-sm font-bold shadow-lg shadow-blue-900/40">P</div><div><p class="font-bold text-sm text-slate-200 leading-tight">PlainView</p><p class="text-slate-600 text-xs">Elise Enterprise</p></div></div>');
+              }}
+            />
           </div>
 
           <div className="mb-8">
@@ -77,13 +88,13 @@ export default function LoginPage() {
         <p className="text-slate-700 text-xs border-t border-white/[0.07] pt-6">eliseenterprise.com</p>
       </div>
 
-      {/* Right login form */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      {/* Right login form — always dark */}
+      <div className="flex-1 flex items-center justify-center p-8 bg-[#070C18]">
         <div className="w-full max-w-sm">
 
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <img src="/plainview-logo.png" alt="PlainView" className="h-8 w-auto object-contain"
+            <img src="/plainview-logo.png" alt="PlainView" className="h-8 w-auto object-contain max-w-[160px]"
               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
           </div>
 
@@ -97,8 +108,8 @@ export default function LoginPage() {
               <label className="block text-xs font-semibold text-slate-400 mb-1.5">Email address</label>
               <input
                 type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="peter@eliseenterprise.com" autoComplete="email"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.1] bg-white/[0.04] text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-blue-500/50 focus:bg-white/[0.06] transition"
+                placeholder="you@company.com" autoComplete="username"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.12] bg-white/[0.05] text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition"
               />
             </div>
 
@@ -109,9 +120,9 @@ export default function LoginPage() {
                   type={showPw ? "text" : "password"} value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••" autoComplete="current-password"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.1] bg-white/[0.04] text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-blue-500/50 focus:bg-white/[0.06] transition pr-10"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-white/[0.12] bg-white/[0.05] text-sm text-slate-200 placeholder-slate-600 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition pr-10"
                 />
-                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-400">
+                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-400 transition-colors">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     {showPw
                       ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
@@ -141,7 +152,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="text-center text-xs text-slate-700 mt-8">Plainview · Elise Enterprise</p>
+          <p className="text-center text-xs text-slate-700 mt-8">PlainView · Elise Enterprise</p>
         </div>
       </div>
     </main>
