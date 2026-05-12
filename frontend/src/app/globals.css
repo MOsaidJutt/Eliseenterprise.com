@@ -88,9 +88,9 @@ body {
 .recharts-cartesian-grid-vertical line { stroke: var(--border); }
 .recharts-legend-item-text { color: var(--text-secondary) !important; font-size: 12px; }
 
-/* ── Print ───────────────────────────────────────────────── */
+/* ── Print (fallback — primary export uses downloadPDF) ──── */
 @media print {
-  @page { size: A3 landscape; margin: 1.5cm; }
+  @page { size: A4 portrait; margin: 1.5cm; }
 
   .no-print { display: none !important; }
 

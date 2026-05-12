@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { downloadPDF } from "@/lib/downloadPDF";
 import { AnalysisResult, fetchAnalysis, fetchCompany, CompanyInfo } from "@/lib/api";
 import { isLoggedIn, clearToken, getUser, getUploadPath } from "@/lib/auth";
 import KPISummary from "@/components/KPISummary";
@@ -38,6 +39,8 @@ function CompanyDashboardInner() {
   const [company, setCompany] = useState<CompanyInfo | null>(null);
   const [active, setActive] = useState("executive");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
   const user = getUser();
 
   const loadAnalysis = useCallback(async (id: number) => {
@@ -166,17 +169,28 @@ function CompanyDashboardInner() {
           ))}
         </nav>
 
-        <div className="px-3 py-2.5 shrink-0 no-print" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+        <div className="px-3 py-2.5 shrink-0" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
           <button
-            onClick={() => window.print()}
+            disabled={pdfLoading || !contentRef.current}
+            onClick={async () => {
+              if (!contentRef.current) return;
+              setPdfLoading(true);
+              try {
+                const name = result?.kpis?.project_name ?? "plainview";
+                await downloadPDF(contentRef.current, `${name}-report.pdf`);
+              } finally {
+                setPdfLoading(false);
+              }
+            }}
             className="w-full flex items-center justify-center gap-2 rounded-xl py-2 font-semibold transition-all"
-            style={{ fontSize: 11, background: "rgba(30,64,175,0.18)", color: "#93C5FD", border: "1px solid rgba(96,165,250,0.2)" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(30,64,175,0.28)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(30,64,175,0.18)"; }}>
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
-            Download PDF
+            style={{ fontSize: 11, background: pdfLoading ? "rgba(30,64,175,0.09)" : "rgba(30,64,175,0.18)", color: "#93C5FD", border: "1px solid rgba(96,165,250,0.2)", cursor: pdfLoading ? "wait" : "pointer" }}
+            onMouseEnter={(e) => { if (!pdfLoading) (e.currentTarget as HTMLButtonElement).style.background = "rgba(30,64,175,0.28)"; }}
+            onMouseLeave={(e) => { if (!pdfLoading) (e.currentTarget as HTMLButtonElement).style.background = "rgba(30,64,175,0.18)"; }}>
+            {pdfLoading ? (
+              <><svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>Generating…</>
+            ) : (
+              <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Download PDF</>
+            )}
           </button>
         </div>
 
@@ -207,7 +221,7 @@ function CompanyDashboardInner() {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto" style={{ background: "var(--bg-app)" }}>
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <div ref={contentRef} className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
           <section id="executive"><ExecutiveSummary kpis={result.kpis} observations={result.observations} spi_by_contractor={result.spi_by_contractor} milestones={result.milestones} float_erosion={result.float_erosion} /></section>
           <section id="kpi"><KPISummary kpis={result.kpis} /></section>
           <section id="observations"><ObservationsPanel observations={result.observations} /></section>
