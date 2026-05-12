@@ -465,6 +465,17 @@ export default function AdminPage() {
       <header className="border-b border-white/[0.07] bg-[#070C18]/80 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 h-14 flex items-center justify-between">
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.back()}
+              className="text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1.5 text-xs font-medium"
+              title="Back to dashboard"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+            <div className="w-px h-4 bg-white/10" />
             <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center text-xs font-bold shadow-lg shadow-blue-900/40">
               P
             </div>

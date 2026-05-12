@@ -133,6 +133,17 @@ function CompanyDashboardInner() {
             </svg>
             {sidebarOpen ? "Hide History" : "History"}
           </button>
+
+          <a href={`/${slug}`}
+            className="w-full flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors mt-1"
+            style={{ fontSize: 10, fontWeight: 600, color: "#64748B", background: "transparent", textDecoration: "none" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.05)"; (e.currentTarget as HTMLAnchorElement).style.color = "#93C5FD"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "#64748B"; }}>
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            New Analysis
+          </a>
         </div>
 
         <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
@@ -155,6 +166,20 @@ function CompanyDashboardInner() {
           ))}
         </nav>
 
+        <div className="px-3 py-2.5 shrink-0 no-print" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+          <button
+            onClick={() => window.print()}
+            className="w-full flex items-center justify-center gap-2 rounded-xl py-2 font-semibold transition-all"
+            style={{ fontSize: 11, background: "rgba(30,64,175,0.18)", color: "#93C5FD", border: "1px solid rgba(96,165,250,0.2)" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(30,64,175,0.28)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(30,64,175,0.18)"; }}>
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download PDF
+          </button>
+        </div>
+
         <div className="px-4 py-3 shrink-0 flex items-center justify-between"
           style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
           <p className="truncate" style={{ fontSize: 10, color: "#475569" }}>{user?.name || user?.email}</p>
@@ -169,13 +194,6 @@ function CompanyDashboardInner() {
                 </svg>
               </a>
             )}
-            <button onClick={() => window.print()} style={{ color: "#475569" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#94A3B8")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-              </svg>
-            </button>
             <button onClick={() => { clearToken(); router.replace("/login"); }} style={{ color: "#475569" }}
               onMouseEnter={(e) => (e.currentTarget.style.color = "#94A3B8")}
               onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}>
@@ -200,13 +218,13 @@ function CompanyDashboardInner() {
           <section id="performance">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <SPIByContractor data={result.spi_by_contractor} />
-              {result.ppc.length > 0 && <PPCTable data={result.ppc} />}
+              <PPCTable data={result.ppc} />
             </div>
           </section>
           <section id="resources">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <ResourceHistogram data={result.resources} />
-              {result.float_erosion.length > 0 && <FloatErosion data={result.float_erosion} />}
+              <FloatErosion data={result.float_erosion} />
             </div>
           </section>
           <section id="milestones"><MilestoneTracker data={result.milestones} /></section>

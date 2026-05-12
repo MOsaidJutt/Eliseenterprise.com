@@ -10,6 +10,7 @@ import {
   AnalysisResult,
 } from "@/lib/api";
 import { isLoggedIn, clearToken, getUser } from "@/lib/auth";
+import FileHistorySidebar from "@/components/FileHistorySidebar";
 
 function DuplicateModal({
   slug,
@@ -112,6 +113,7 @@ export default function CompanyUploadPage() {
   const [error,       setError]       = useState("");
   const [user,        setUser]        = useState<ReturnType<typeof getUser>>(null);
   const [duplicateInfo, setDuplicateInfo] = useState<DuplicateAnalysis[] | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn()) { router.replace("/login"); return; }
@@ -198,15 +200,25 @@ export default function CompanyUploadPage() {
   const maxFilesLabel = fileType === "baseline" ? "1 .xer file only" : "Up to 10 .xer files";
 
   return (
-    <main className="min-h-screen flex" style={{ background: "var(--bg-app)" }}>
+    <main className="h-screen overflow-hidden flex" style={{ background: "var(--bg-app)" }}>
 
       {duplicateInfo && (
         <DuplicateModal slug={slug} duplicates={duplicateInfo} onCancel={() => setDuplicateInfo(null)} onOverwrite={handleOverwrite} overwriting={overwriting} />
       )}
 
-      {/* Left sidebar */}
-      <div className="hidden lg:flex flex-col justify-between w-72 xl:w-80 shrink-0 p-8"
-        style={{ background: "var(--bg-nav)", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
+      {/* File History Sidebar (slide-in from left) */}
+      <div className={`${historyOpen ? "w-64" : "w-0"} shrink-0 transition-all duration-300 overflow-hidden`}>
+        <div className="w-64 h-full">
+          <FileHistorySidebar
+            onSelect={(id) => { router.push(`/${slug}/dashboard/${id}`); }}
+            onNewAnalysis={() => setHistoryOpen(false)}
+          />
+        </div>
+      </div>
+
+      {/* Left nav sidebar */}
+      <div className="hidden lg:flex flex-col justify-between w-72 xl:w-80 shrink-0"
+        style={{ background: "var(--bg-nav)", borderRight: "1px solid rgba(255,255,255,0.06)", padding: "2rem" }}>
         <div>
           {/* Logo */}
           <div className="flex items-center gap-3 mb-10">
@@ -248,35 +260,52 @@ export default function CompanyUploadPage() {
           </div>
         </div>
 
-        <div className="pt-5 flex items-center justify-between" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-          <div>
-            <p style={{ color: "#64748B", fontSize: 12 }}>{user?.name || user?.email}</p>
-            <p style={{ color: "#334155", fontSize: 11 }}>{user?.role}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {user?.role === "admin" && (
-              <a href="/admin" title="Admin Panel" style={{ color: "#475569" }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "#F59E0B")}
+        <div className="pt-5 space-y-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <button
+            onClick={() => setHistoryOpen(o => !o)}
+            className="w-full flex items-center gap-2 rounded-lg px-3 py-2 transition-colors"
+            style={{
+              fontSize: 11, fontWeight: 600,
+              background: historyOpen ? "rgba(96,165,250,0.12)" : "rgba(255,255,255,0.04)",
+              color: historyOpen ? "#93C5FD" : "#64748B",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}>
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {historyOpen ? "Hide History" : "Browse Previous Analyses"}
+          </button>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p style={{ color: "#64748B", fontSize: 12 }}>{user?.name || user?.email}</p>
+              <p style={{ color: "#334155", fontSize: 11 }}>{user?.role}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {user?.role === "admin" && (
+                <a href="/admin" title="Admin Panel" style={{ color: "#475569" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = "#F59E0B")}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </a>
+              )}
+              <button onClick={() => { clearToken(); router.replace("/login"); }} style={{ color: "#475569" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "#94A3B8")}
                 onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}>
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
-              </a>
-            )}
-            <button onClick={() => { clearToken(); router.replace("/login"); }} style={{ color: "#475569" }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#94A3B8")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "#475569")}>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main upload area */}
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
+      <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center p-8">
         <div className="w-full max-w-lg">
 
           <div className="mb-8">

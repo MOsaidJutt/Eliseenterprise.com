@@ -3,6 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
+from sqlalchemy.orm import selectinload
 from database import get_db
 import models, schemas
 from auth import get_current_user
@@ -13,7 +14,6 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 
 def _build_context(result: dict) -> str:
-    """Build a compact text context from analysis result for GPT injection."""
     kpis = result.get("kpis", {})
     lines = [
         f"Project: {kpis.get('project_name', 'Unknown')}",
@@ -60,6 +60,12 @@ def _build_context(result: dict) -> str:
         lines.append(f"\nFloat Erosion: {fe[0].get('eroded_float_days', 0)} days consumed "
                      f"across {fe[0].get('eroded_activities', 0)} activities.")
 
+    spi_list = result.get("spi_by_contractor", [])
+    if spi_list:
+        lines.append("\nSPI by Contractor:")
+        for s in spi_list[:8]:
+            lines.append(f"  - {s.get('contractor', '')}: SPI {s.get('spi', 'N/A')}")
+
     return "\n".join(lines)
 
 
@@ -75,16 +81,14 @@ async def chat(
     from openai import AsyncOpenAI
     client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
-    # Load analysis context
+    # Load analysis context — admin users (company_id=None) bypass the company filter
     context_str = ""
     if body.analysis_id:
-        result = await db.execute(
-            select(models.Analysis).where(
-                models.Analysis.id == body.analysis_id,
-                models.Analysis.company_id == user.company_id,
-            )
-        )
-        analysis = result.scalar_one_or_none()
+        q = select(models.Analysis).where(models.Analysis.id == body.analysis_id)
+        if user.company_id is not None:
+            q = q.where(models.Analysis.company_id == user.company_id)
+        analysis_result = await db.execute(q)
+        analysis = analysis_result.scalar_one_or_none()
         if analysis:
             context_str = _build_context(analysis.result)
 
@@ -109,7 +113,6 @@ async def chat(
         db.add(conversation)
         await db.flush()
 
-    # If no analysis data is loaded, return a synthetic response without calling OpenAI
     if not context_str:
         no_data_reply = (
             "No schedule data is currently loaded. "
@@ -123,7 +126,6 @@ async def chat(
         await db.refresh(assistant_msg)
         return schemas.ChatResponse(reply=no_data_reply, conversation_id=conversation.id, message_id=assistant_msg.id)
 
-    # Build message history for GPT
     history_result = await db.execute(
         select(models.AIMessage)
         .where(models.AIMessage.conversation_id == conversation.id)
@@ -148,7 +150,6 @@ async def chat(
         messages.append({"role": msg.role, "content": msg.content})
     messages.append({"role": "user", "content": body.message})
 
-    # Call OpenAI
     try:
         response = await client.chat.completions.create(
             model="gpt-4o",
@@ -160,7 +161,6 @@ async def chat(
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"AI service error: {str(exc)}")
 
-    # Save user message + assistant reply
     user_msg = models.AIMessage(conversation_id=conversation.id, role="user", content=body.message)
     assistant_msg = models.AIMessage(conversation_id=conversation.id, role="assistant", content=reply_text)
     db.add(user_msg)
@@ -196,7 +196,9 @@ async def get_conversation(
     user: models.User = Depends(get_current_user),
 ):
     result = await db.execute(
-        select(models.AIConversation).where(
+        select(models.AIConversation)
+        .options(selectinload(models.AIConversation.messages))
+        .where(
             models.AIConversation.id == conversation_id,
             models.AIConversation.user_id == user.id,
         )
@@ -204,12 +206,6 @@ async def get_conversation(
     conv = result.scalar_one_or_none()
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
-    msgs_result = await db.execute(
-        select(models.AIMessage)
-        .where(models.AIMessage.conversation_id == conv.id)
-        .order_by(models.AIMessage.created_at)
-    )
-    conv.messages = msgs_result.scalars().all()
     return conv
 
 

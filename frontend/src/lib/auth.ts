@@ -46,7 +46,9 @@ export function isAdmin(): boolean {
 }
 
 export function getUploadPath(): string {
-  const slug = getUser()?.company_slug;
+  const user = getUser();
+  if (user?.role === "admin") return "/admin";
+  const slug = user?.company_slug;
   return slug ? `/${slug}` : "/login";
 }
 
