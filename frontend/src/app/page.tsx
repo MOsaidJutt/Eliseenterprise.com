@@ -1,8 +1,3 @@
-"use client";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { isLoggedIn, getUploadPath } from "@/lib/auth";
-
 const FEATURES = [
   { icon: "📊", title: "S-Curve Analysis", desc: "Baseline vs Actual vs Forecast with dynamic 12-month windowing." },
   { icon: "🎯", title: "Critical Path Risk", desc: "Identify zero-float activities and negative float before they escalate." },
@@ -22,34 +17,29 @@ const STATS = [
 ];
 
 export default function LandingPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    if (isLoggedIn()) router.replace(getUploadPath());
-  }, [router]);
-
   return (
     <main className="min-h-screen bg-[#0F172A] text-white">
 
-      {/* ── Nav ─────────────────────────────────────────────────────────── */}
+      {/* Nav */}
       <nav className="border-b border-white/10 px-6 py-4 flex items-center justify-between max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-xs font-bold">P</div>
           <span className="font-bold text-lg tracking-tight">Plainview</span>
           <span className="text-white/30 text-xs">by Elise Enterprise</span>
         </div>
-        <button
-          onClick={() => router.push("/login")}
+        <a
+          href="/login"
           className="bg-white text-slate-900 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-slate-100 transition-colors"
+          style={{ textDecoration: "none" }}
         >
           Sign In →
-        </button>
+        </a>
       </nav>
 
-      {/* ── Hero ──────────────────────────────────────────────────────────── */}
+      {/* Hero */}
       <section className="max-w-7xl mx-auto px-6 pt-24 pb-20 text-center">
         <div className="inline-flex items-center gap-2 bg-blue-600/20 border border-blue-500/30 rounded-full px-4 py-1.5 text-xs text-blue-400 font-semibold mb-8">
-          <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse" />
+          <span className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
           Phase 2 — Multi-User · AI Chat · Full History
         </div>
 
@@ -65,22 +55,24 @@ export default function LandingPage() {
         </p>
 
         <div className="flex items-center justify-center gap-4 flex-wrap">
-          <button
-            onClick={() => router.push("/login")}
-            className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-blue-600/25 text-sm"
+          <a
+            href="/login"
+            className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-8 py-3.5 rounded-xl transition-all shadow-lg text-sm"
+            style={{ textDecoration: "none" }}
           >
             Get Started →
-          </button>
-          <button
-            onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
+          </a>
+          <a
+            href="#features"
             className="border border-white/20 hover:border-white/40 text-white/70 hover:text-white font-semibold px-8 py-3.5 rounded-xl transition-all text-sm"
+            style={{ textDecoration: "none" }}
           >
             See Features
-          </button>
+          </a>
         </div>
       </section>
 
-      {/* ── Stats ──────────────────────────────────────────────────────────── */}
+      {/* Stats */}
       <section className="border-y border-white/10 py-10">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 sm:grid-cols-4 gap-8 text-center">
           {STATS.map((s) => (
@@ -92,7 +84,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Features ───────────────────────────────────────────────────────── */}
+      {/* Features */}
       <section id="features" className="max-w-7xl mx-auto px-6 py-24">
         <div className="text-center mb-16">
           <p className="text-xs font-bold text-blue-400 uppercase tracking-widest mb-3">Capabilities</p>
@@ -104,7 +96,7 @@ export default function LandingPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {FEATURES.map((f) => (
-            <div key={f.title} className="bg-white/5 hover:bg-white/8 border border-white/10 rounded-2xl p-5 transition-colors group">
+            <div key={f.title} className="bg-white/5 hover:bg-white/[0.08] border border-white/10 rounded-2xl p-5 transition-colors">
               <div className="text-2xl mb-3">{f.icon}</div>
               <h3 className="font-bold text-sm mb-1.5 text-white">{f.title}</h3>
               <p className="text-white/40 text-xs leading-relaxed">{f.desc}</p>
@@ -113,19 +105,20 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA ────────────────────────────────────────────────────────────── */}
+      {/* CTA */}
       <section className="border-t border-white/10 py-20 text-center px-6">
         <h2 className="text-3xl font-extrabold mb-4">Ready to start?</h2>
         <p className="text-white/40 mb-8 text-sm">Sign in with your credentials to upload XER files and view the dashboard.</p>
-        <button
-          onClick={() => router.push("/login")}
-          className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-10 py-4 rounded-xl transition-all shadow-lg shadow-blue-600/25 text-sm"
+        <a
+          href="/login"
+          className="inline-block bg-blue-600 hover:bg-blue-500 text-white font-bold px-10 py-4 rounded-xl transition-all shadow-lg text-sm"
+          style={{ textDecoration: "none" }}
         >
           Sign In to Plainview →
-        </button>
+        </a>
       </section>
 
-      {/* ── Footer ──────────────────────────────────────────────────────────── */}
+      {/* Footer */}
       <footer className="border-t border-white/10 py-8 text-center text-white/20 text-xs">
         Plainview · Elise Enterprise · Built by Redline Intelligence
       </footer>
