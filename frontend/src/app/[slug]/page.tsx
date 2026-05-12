@@ -100,13 +100,15 @@ function DuplicateModal({
   );
 }
 
+type TaggedFile = { file: File; type: "baseline" | "update" };
+
 export default function CompanyUploadPage() {
   const params = useParams();
   const slug   = params.slug as string;
   const router = useRouter();
   const [company,     setCompany]     = useState<CompanyInfo | null>(null);
-  const [files,       setFiles]       = useState<File[]>([]);
-  const [fileType,    setFileType]    = useState<"baseline" | "update">("update");
+  const [files,       setFiles]       = useState<TaggedFile[]>([]);
+  const [tab,         setTab]         = useState<"baseline" | "update">("update");
   const [dragging,    setDragging]    = useState(false);
   const [loading,     setLoading]     = useState(false);
   const [overwriting, setOverwriting] = useState(false);
@@ -125,32 +127,46 @@ export default function CompanyUploadPage() {
     if (!fl) return;
     const xers = Array.from(fl).filter((f) => f.name.toLowerCase().endsWith(".xer"));
     if (xers.length === 0) { setError("Please select .xer files."); return; }
-    if (fileType === "baseline") {
-      setFiles([xers[0]]);
+    if (tab === "baseline") {
+      setFiles([{ file: xers[0], type: "baseline" }]);
       if (xers.length > 1) setError("Baseline accepts 1 file only — first file selected.");
       else setError("");
       return;
     }
     setFiles((prev) => {
-      const combined = [...prev, ...xers];
-      const unique   = combined.filter((f, i, arr) => arr.findIndex((x) => x.name === f.name) === i);
+      const incoming = xers.map((f) => ({ file: f, type: "update" as const }));
+      const combined = [...prev, ...incoming];
+      const unique   = combined.filter((tf, i, arr) => arr.findIndex((x) => x.file.name === tf.file.name) === i);
       return unique.slice(0, 10);
     });
     setError("");
   }
 
-  function handleFileTypeChange(type: "baseline" | "update") {
-    setFileType(type);
-    if (type === "baseline" && files.length > 1) { setFiles([files[0]]); setError("Baseline accepts 1 file only."); }
-    else setError("");
+  function toggleFileTag(name: string) {
+    setFiles((prev) =>
+      prev.map((tf) =>
+        tf.file.name === name ? { ...tf, type: tf.type === "baseline" ? "update" : "baseline" } : tf
+      )
+    );
+  }
+
+  function handleTabChange(type: "baseline" | "update") {
+    setTab(type);
+    if (type === "baseline" && files.length > 1) {
+      setFiles([files[0]]);
+      setError("Baseline accepts 1 file only.");
+    } else {
+      setError("");
+    }
   }
 
   async function handleAnalyze() {
     if (files.length === 0) { setError("Select at least one XER file."); return; }
     setLoading(true);
     setError("");
+    const effectiveType = files.some((tf) => tf.type === "baseline") ? "baseline" : "update";
     try {
-      const result = await analyzeXerFiles(files, fileType, "", false);
+      const result = await analyzeXerFiles(files.map((tf) => tf.file), effectiveType, "", false);
       if ("duplicate" in result && result.duplicate === true) {
         setDuplicateInfo((result as DuplicateResponse).duplicate_analyses);
         setLoading(false);
@@ -174,8 +190,9 @@ export default function CompanyUploadPage() {
   async function handleOverwrite() {
     setOverwriting(true);
     setError("");
+    const effectiveType = files.some((tf) => tf.type === "baseline") ? "baseline" : "update";
     try {
-      const result = await analyzeXerFiles(files, fileType, "", true);
+      const result = await analyzeXerFiles(files.map((tf) => tf.file), effectiveType, "", true);
       if ("duplicate" in result && result.duplicate === true) {
         setError("Unexpected duplicate response on overwrite.");
         setOverwriting(false);
@@ -197,7 +214,7 @@ export default function CompanyUploadPage() {
   }
 
   const logoUrl = company?.logo_url;
-  const maxFilesLabel = fileType === "baseline" ? "1 .xer file only" : "Up to 10 .xer files";
+  const maxFilesLabel = tab === "baseline" ? "1 .xer file only" : "Up to 10 .xer files";
 
   return (
     <main className="h-screen overflow-hidden flex" style={{ background: "var(--bg-app)" }}>
@@ -318,20 +335,20 @@ export default function CompanyUploadPage() {
           <div className="rounded-2xl overflow-hidden"
             style={{ background: "var(--bg-card)", border: "1px solid var(--border)", boxShadow: "0 4px 24px rgba(13,27,62,0.07)" }}>
 
-            {/* File type toggle */}
+            {/* File type toggle — sets the default tag for newly added files */}
             <div className="px-5 pt-5 pb-4 flex gap-2.5" style={{ borderBottom: "1px solid var(--border)" }}>
               <button
-                onClick={() => handleFileTypeChange("update")}
+                onClick={() => handleTabChange("update")}
                 className="flex-1 py-2.5 text-xs font-semibold rounded-xl transition-all"
-                style={fileType === "update"
+                style={tab === "update"
                   ? { background: "var(--primary)", color: "#fff", boxShadow: "0 4px 12px rgba(30,64,175,0.25)" }
                   : { background: "var(--bg-card2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
                 Update Snapshot
               </button>
               <button
-                onClick={() => handleFileTypeChange("baseline")}
+                onClick={() => handleTabChange("baseline")}
                 className="flex-1 py-2.5 text-xs font-semibold rounded-xl transition-all"
-                style={fileType === "baseline"
+                style={tab === "baseline"
                   ? { background: "var(--success)", color: "#fff", boxShadow: "0 4px 12px rgba(5,150,105,0.25)" }
                   : { background: "var(--bg-card2)", color: "var(--text-secondary)", border: "1px solid var(--border)" }}>
                 Baseline
@@ -351,7 +368,7 @@ export default function CompanyUploadPage() {
                 onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}
               >
                 <input
-                  type="file" multiple={fileType !== "baseline"}
+                  type="file" multiple={tab !== "baseline"}
                   style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0, cursor: "pointer", zIndex: 10 }}
                   onChange={(e) => addFiles(e.target.files)}
                 />
@@ -373,32 +390,39 @@ export default function CompanyUploadPage() {
               </div>
             </div>
 
-            {/* File list */}
+            {/* File list — each file keeps its own tag; click tag to toggle */}
             {files.length > 0 && (
               <div className="px-5 pb-3 space-y-2">
-                {files.map((f) => (
-                  <div key={f.name} className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                {files.map((tf) => (
+                  <div key={tf.file.name} className="flex items-center gap-3 rounded-xl px-3 py-2.5"
                     style={{ background: "var(--bg-card2)", border: "1px solid var(--border)" }}>
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                       style={{
-                        background: fileType === "baseline" ? "rgba(5,150,105,0.1)" : "rgba(30,64,175,0.08)",
-                        border: `1px solid ${fileType === "baseline" ? "rgba(5,150,105,0.2)" : "rgba(30,64,175,0.15)"}`,
+                        background: tf.type === "baseline" ? "rgba(5,150,105,0.1)" : "rgba(30,64,175,0.08)",
+                        border: `1px solid ${tf.type === "baseline" ? "rgba(5,150,105,0.2)" : "rgba(30,64,175,0.15)"}`,
                       }}>
-                      <span style={{ fontSize: 9, fontWeight: 700, color: fileType === "baseline" ? "var(--success)" : "var(--primary)", fontFamily: "monospace" }}>XER</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, color: tf.type === "baseline" ? "var(--success)" : "var(--primary)", fontFamily: "monospace" }}>XER</span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold truncate" style={{ fontSize: 13, color: "var(--text-primary)" }}>{f.name}</p>
-                      <p style={{ fontSize: 11, color: "var(--text-muted)" }}>{(f.size / 1024).toFixed(0)} KB</p>
+                      <p className="font-semibold truncate" style={{ fontSize: 13, color: "var(--text-primary)" }}>{tf.file.name}</p>
+                      <p style={{ fontSize: 11, color: "var(--text-muted)" }}>{(tf.file.size / 1024).toFixed(0)} KB</p>
                     </div>
-                    <span className="text-xs font-semibold shrink-0 rounded-full px-2 py-0.5"
+                    <button
+                      onClick={() => toggleFileTag(tf.file.name)}
+                      title="Click to change tag"
+                      className="text-xs font-semibold shrink-0 rounded-full px-2.5 py-1 transition-all"
                       style={{
-                        background: fileType === "baseline" ? "var(--success-light)" : "var(--primary-light)",
-                        color: fileType === "baseline" ? "var(--success)" : "var(--primary)",
-                        border: `1px solid ${fileType === "baseline" ? "rgba(5,150,105,0.2)" : "rgba(30,64,175,0.15)"}`,
-                      }}>
-                      {fileType === "baseline" ? "Baseline" : "Update"}
-                    </span>
-                    <button onClick={() => setFiles((p) => p.filter((x) => x.name !== f.name))}
+                        background: tf.type === "baseline" ? "var(--success-light)" : "var(--primary-light)",
+                        color: tf.type === "baseline" ? "var(--success)" : "var(--primary)",
+                        border: `1px solid ${tf.type === "baseline" ? "rgba(5,150,105,0.25)" : "rgba(30,64,175,0.2)"}`,
+                        cursor: "pointer",
+                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "0.7"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.opacity = "1"; }}
+                    >
+                      {tf.type === "baseline" ? "Baseline" : "Update"}
+                    </button>
+                    <button onClick={() => setFiles((p) => p.filter((x) => x.file.name !== tf.file.name))}
                       style={{ color: "var(--text-muted)" }}
                       onMouseEnter={(e) => (e.currentTarget.style.color = "var(--danger)")}
                       onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-muted)")}>
