@@ -239,13 +239,11 @@ function AnalysisDashboardInner() {
           <section id="performance">
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               <SPIByContractor data={result.spi_by_contractor} />
-              <PPCTable data={result.ppc} />
-            </div>
-          </section>
-          <section id="resources">
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-              <ResourceHistogram data={result.resources} />
-              <FloatErosion data={result.float_erosion} />
+              <div className="[&>*]:h-full grid gap-6" style={{ gridTemplateRows: "1fr 1fr 1fr" }}>
+                <PPCTable data={result.ppc} />
+                <div id="resources"><ResourceHistogram data={result.resources} /></div>
+                <FloatErosion data={result.float_erosion} />
+              </div>
             </div>
           </section>
           <section id="milestones"><MilestoneTracker data={result.milestones} /></section>
