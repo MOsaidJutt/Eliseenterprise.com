@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { downloadPDF } from "@/lib/downloadPDF";
+import PDFProgressModal from "@/components/PDFProgressModal";
 import { AnalysisResult, fetchAnalysis, fetchCompany, CompanyInfo } from "@/lib/api";
 import { isLoggedIn, clearToken, getUser, getUploadPath } from "@/lib/auth";
 import KPISummary from "@/components/KPISummary";
@@ -39,7 +40,7 @@ function CompanyDashboardInner() {
   const [company, setCompany] = useState<CompanyInfo | null>(null);
   const [active, setActive] = useState("executive");
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfModal, setPdfModal] = useState<{ open: boolean; label: string; pct: number; done: boolean; error?: string }>({ open: false, label: "", pct: 0, done: false });
   const contentRef = useRef<HTMLDivElement>(null);
   const user = getUser();
 
@@ -171,28 +172,37 @@ function CompanyDashboardInner() {
 
         <div className="px-3 py-2.5 shrink-0" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
           <button
-            disabled={pdfLoading || !contentRef.current}
-            onClick={async () => {
+            disabled={pdfModal.open}
+            onClick={() => {
               if (!contentRef.current) return;
-              setPdfLoading(true);
-              try {
-                const name = result?.kpis?.project_name ?? "plainview";
-                await downloadPDF(contentRef.current, `${name}-report.pdf`);
-              } finally {
-                setPdfLoading(false);
-              }
+              const name = result?.kpis?.project_name ?? "plainview";
+              setPdfModal({ open: true, label: "Starting…", pct: 0, done: false });
+              downloadPDF(
+                contentRef.current,
+                `${name}-report.pdf`,
+                (label, pct) => setPdfModal((m) => ({ ...m, label, pct, done: pct === 100 })),
+              ).catch((err) => setPdfModal((m) => ({ ...m, done: true, error: String(err) })));
             }}
             className="w-full flex items-center justify-center gap-2 rounded-xl py-2 font-semibold transition-all"
-            style={{ fontSize: 11, background: pdfLoading ? "rgba(30,64,175,0.09)" : "rgba(30,64,175,0.18)", color: "#93C5FD", border: "1px solid rgba(96,165,250,0.2)", cursor: pdfLoading ? "wait" : "pointer" }}
-            onMouseEnter={(e) => { if (!pdfLoading) (e.currentTarget as HTMLButtonElement).style.background = "rgba(30,64,175,0.28)"; }}
-            onMouseLeave={(e) => { if (!pdfLoading) (e.currentTarget as HTMLButtonElement).style.background = "rgba(30,64,175,0.18)"; }}>
-            {pdfLoading ? (
-              <><svg className="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>Generating…</>
-            ) : (
-              <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Download PDF</>
-            )}
+            style={{ fontSize: 11, background: "rgba(30,64,175,0.18)", color: "#93C5FD", border: "1px solid rgba(96,165,250,0.2)", cursor: pdfModal.open ? "wait" : "pointer" }}
+            onMouseEnter={(e) => { if (!pdfModal.open) (e.currentTarget as HTMLButtonElement).style.background = "rgba(30,64,175,0.28)"; }}
+            onMouseLeave={(e) => { if (!pdfModal.open) (e.currentTarget as HTMLButtonElement).style.background = "rgba(30,64,175,0.18)"; }}>
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download PDF
           </button>
         </div>
+
+        {pdfModal.open && (
+          <PDFProgressModal
+            label={pdfModal.label}
+            pct={pdfModal.pct}
+            done={pdfModal.done}
+            error={pdfModal.error}
+            onClose={() => setPdfModal({ open: false, label: "", pct: 0, done: false })}
+          />
+        )}
 
         <div className="px-4 py-3 shrink-0 flex items-center justify-between"
           style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
