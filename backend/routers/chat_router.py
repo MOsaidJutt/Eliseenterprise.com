@@ -1,4 +1,4 @@
-import os
+import os, json
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,62 +13,6 @@ router = APIRouter(prefix="/api/chat", tags=["chat"])
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 
 
-def _build_context(result: dict) -> str:
-    kpis = result.get("kpis", {})
-    lines = [
-        f"Project: {kpis.get('project_name', 'Unknown')}",
-        f"Data Date: {kpis.get('data_date', 'Unknown')}",
-        f"Overall Progress: {kpis.get('overall_pct_complete', 0)}%",
-        f"SPI: {kpis.get('spi', 'N/A')}",
-        f"Delay vs Baseline: {kpis.get('delay_days', 0)} days",
-        f"Total Activities: {kpis.get('total_activities', 0)}",
-        f"Completed: {kpis.get('completed_activities', 0)}",
-        f"In Progress: {kpis.get('in_progress_activities', 0)}",
-        f"Critical Activities: {kpis.get('critical_activities', 0)}",
-        f"Critical Path Risk: {kpis.get('critical_path_risk_pct', 0)}%",
-        f"Negative Float Activities: {kpis.get('neg_float_activities', 0)}",
-        f"Planned End: {kpis.get('planned_end', 'N/A')}",
-        f"Forecast End: {kpis.get('forecast_end', 'N/A')}",
-    ]
-
-    milestones = result.get("milestones", [])
-    if milestones:
-        lines.append("\nKey Milestones:")
-        for m in milestones[:10]:
-            lines.append(
-                f"  - {m.get('task_name', '')}: baseline {m.get('baseline', '')}, "
-                f"status {m.get('status', '')}, variance {m.get('variance_days', 0)}d"
-            )
-
-    critical = result.get("critical_path", [])
-    if critical:
-        lines.append("\nTop Critical Path Activities:")
-        for c in critical[:10]:
-            lines.append(
-                f"  - {c.get('task_name', '')} [{c.get('task_code', '')}]: "
-                f"float {c.get('total_float_days', 0)}d, {c.get('pct_complete', 0)}% complete"
-            )
-
-    obs = result.get("observations", [])
-    if obs:
-        lines.append("\nKey Observations:")
-        for o in obs:
-            lines.append(f"  - {o}")
-
-    fe = result.get("float_erosion", [])
-    if fe:
-        lines.append(f"\nFloat Erosion: {fe[0].get('eroded_float_days', 0)} days consumed "
-                     f"across {fe[0].get('eroded_activities', 0)} activities.")
-
-    spi_list = result.get("spi_by_contractor", [])
-    if spi_list:
-        lines.append("\nSPI by Contractor:")
-        for s in spi_list[:8]:
-            lines.append(f"  - {s.get('contractor', '')}: SPI {s.get('spi', 'N/A')}")
-
-    return "\n".join(lines)
-
-
 @router.post("", response_model=schemas.ChatResponse)
 async def chat(
     body: schemas.ChatRequest,
@@ -81,27 +25,28 @@ async def chat(
     from openai import AsyncOpenAI
     client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
-    # Load analysis context — admin users (company_id=None) bypass the company filter
+    # Load analysis data
     context_str = ""
     if body.analysis_id:
         q = select(models.Analysis).where(models.Analysis.id == body.analysis_id)
-        if user.company_id is not None:
-            q = q.where(models.Analysis.company_id == user.company_id)
-        analysis_result = await db.execute(q)
-        analysis = analysis_result.scalar_one_or_none()
-        if analysis:
-            context_str = _build_context(analysis.result)
+        res = await db.execute(q)
+        analysis = res.scalar_one_or_none()
+        if analysis and analysis.result:
+            # Dump full result as JSON so the AI has everything
+            raw = json.dumps(analysis.result, default=str)
+            # Truncate to ~6000 chars to stay within token limits
+            context_str = raw[:6000]
 
     # Get or create conversation
     conversation: Optional[models.AIConversation] = None
     if body.conversation_id:
-        conv_result = await db.execute(
+        conv_res = await db.execute(
             select(models.AIConversation).where(
                 models.AIConversation.id == body.conversation_id,
                 models.AIConversation.user_id == user.id,
             )
         )
-        conversation = conv_result.scalar_one_or_none()
+        conversation = conv_res.scalar_one_or_none()
 
     if not conversation:
         title = body.message[:60] + ("…" if len(body.message) > 60 else "")
@@ -113,37 +58,33 @@ async def chat(
         db.add(conversation)
         await db.flush()
 
-    if not context_str:
-        no_data_reply = (
-            "No schedule data is currently loaded. "
-            "Please select an analysis from the history panel or upload a new XER file to get started."
-        )
-        user_msg = models.AIMessage(conversation_id=conversation.id, role="user", content=body.message)
-        assistant_msg = models.AIMessage(conversation_id=conversation.id, role="assistant", content=no_data_reply)
-        db.add(user_msg)
-        db.add(assistant_msg)
-        await db.commit()
-        await db.refresh(assistant_msg)
-        return schemas.ChatResponse(reply=no_data_reply, conversation_id=conversation.id, message_id=assistant_msg.id)
-
-    history_result = await db.execute(
+    # Build message history (last 20 messages for context)
+    history_res = await db.execute(
         select(models.AIMessage)
         .where(models.AIMessage.conversation_id == conversation.id)
         .order_by(models.AIMessage.created_at)
         .limit(20)
     )
-    history = history_result.scalars().all()
+    history = history_res.scalars().all()
 
-    system_prompt = (
-        "You are a schedule analytics assistant for Primavera P6 project data. "
-        "You ONLY answer questions based on the specific schedule data provided below. "
-        "Do NOT use general knowledge or outside information. "
-        "If a question cannot be answered from the data, respond: "
-        "'I can only answer questions about the schedule data that has been loaded.' "
-        "Always cite specific numbers, dates, and activity names from the data. "
-        "Be concise and professional.\n\n"
-        f"--- SCHEDULE DATA ---\n{context_str}\n--- END DATA ---"
-    )
+    # System prompt
+    if context_str:
+        system_prompt = (
+            "You are an expert Primavera P6 schedule analyst. "
+            "You have access to the project's schedule data below. "
+            "Answer questions about the schedule, explain findings, and give practical insights. "
+            "You may also explain general schedule analysis concepts (like what float, SPI, or critical path means) "
+            "as they relate to this project's data. "
+            "Always reference specific numbers, dates, or activity names from the data when relevant. "
+            "Be concise and professional.\n\n"
+            f"--- SCHEDULE DATA (JSON) ---\n{context_str}\n--- END DATA ---"
+        )
+    else:
+        system_prompt = (
+            "You are an expert Primavera P6 schedule analyst. "
+            "No schedule data is currently loaded. "
+            "Ask the user to select an analysis from the history panel or upload a new XER file."
+        )
 
     messages = [{"role": "system", "content": system_prompt}]
     for msg in history:
@@ -161,12 +102,22 @@ async def chat(
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"AI service error: {str(exc)}")
 
-    user_msg = models.AIMessage(conversation_id=conversation.id, role="user", content=body.message)
-    assistant_msg = models.AIMessage(conversation_id=conversation.id, role="assistant", content=reply_text)
-    db.add(user_msg)
-    db.add(assistant_msg)
+    # Save messages
+    db.add(models.AIMessage(conversation_id=conversation.id, role="user", content=body.message))
+    db.add(models.AIMessage(conversation_id=conversation.id, role="assistant", content=reply_text))
     await db.commit()
-    await db.refresh(assistant_msg)
+
+    # Get the saved assistant message id
+    msg_res = await db.execute(
+        select(models.AIMessage)
+        .where(
+            models.AIMessage.conversation_id == conversation.id,
+            models.AIMessage.role == "assistant",
+        )
+        .order_by(desc(models.AIMessage.created_at))
+        .limit(1)
+    )
+    assistant_msg = msg_res.scalar_one()
 
     return schemas.ChatResponse(
         reply=reply_text,
