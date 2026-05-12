@@ -20,11 +20,7 @@ export default function LoginPage() {
     try {
       const { access_token, user } = await loginUser(email, password);
       setToken(access_token, user);
-      if (user.role === "admin") {
-        router.replace("/admin");
-      } else {
-        router.replace(user.company_slug ? `/${user.company_slug}` : "/login");
-      }
+      router.replace(user.company_slug ? `/${user.company_slug}` : "/admin");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
