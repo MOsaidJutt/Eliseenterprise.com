@@ -69,12 +69,13 @@ export default function CompanyHomePage() {
   const [analyses,  setAnalyses]  = useState<AnalysisListItem[]>([]);
   const [kpis,      setKpis]      = useState<AnalysisResult | null>(null);
   const [loading,   setLoading]   = useState(true);
-  const [curIdx,    setCurIdx]    = useState(0);
-  const [viewAll,   setViewAll]   = useState(false);
-  const [filter,    setFilter]    = useState<"all"|"baseline"|"update">("all");
-  const [showUpload,setShowUpload]= useState(false);
-  const [dropOpen,  setDropOpen]  = useState(false);
-  const [isDark,    setIsDark]    = useState(true);
+  const [curIdx,       setCurIdx]      = useState(0);
+  const [viewAll,      setViewAll]     = useState(false);
+  const [filter,       setFilter]      = useState<"all"|"baseline"|"update">("all");
+  const [showUpload,   setShowUpload]  = useState(false);
+  const [dropOpen,     setDropOpen]    = useState(false);
+  const [isDark,       setIsDark]      = useState(true);
+  const [portfolioView,setPortfolioView] = useState(true);
 
   // Upload state
   const [files,       setFiles]       = useState<TaggedFile[]>([]);
@@ -110,6 +111,7 @@ export default function CompanyHomePage() {
     const n = Math.max(0, Math.min(analyses.length - 1, idx));
     if (n === curIdx) return;
     setCurIdx(n);
+    setPortfolioView(false); // switch top strip to analysis-specific view
     fetchAnalysis(analyses[n].id).then(setKpis).catch(() => {});
   }
 
@@ -206,24 +208,70 @@ export default function CompanyHomePage() {
             <p style={{ fontSize: 13, color: t.muted }}>{company?.name || slug} · Programme Health Overview</p>
           </div>
 
-          {/* KPI strip */}
-          {k && (
-            <div style={{ maxWidth: 1100, margin: "0 auto 28px", padding: "0 40px", display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
-              {[
-                { val: `${k.overall_pct_complete}%`, lbl: "Overall Progress",  accent: "#3B82F6",  sub: `${k.total_activities?.toLocaleString()} activities` },
-                { val: String(k.spi),               lbl: "Schedule SPI",      accent: k.spi >= 1 ? "#34D399" : "#F87171", sub: k.spi >= 1 ? "On schedule" : "Behind rate" },
-                { val: `${k.critical_path_risk_pct}%`, lbl: "Critical Risk",  accent: "#F59E0B",  sub: `${k.critical_activities?.toLocaleString()} activities` },
-                { val: k.forecast_end || "—",        lbl: "Forecast End",     accent: "#A78BFA",  sub: k.delay_days > 0 ? `${k.delay_days}d behind` : "On track" },
-              ].map(s => (
-                <div key={s.lbl} style={{ background: t.kpiCard, border: `1px solid ${t.border}`, borderRadius: 14, padding: "16px 18px", position: "relative", overflow: "hidden", boxShadow: isDark ? "none" : "0 1px 4px rgba(0,0,0,.06)" }}>
-                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: s.accent }} />
-                  <div style={{ fontSize: 24, fontWeight: 800, color: t.text, marginBottom: 3 }}>{s.val}</div>
-                  <div style={{ fontSize: 9, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" }}>{s.lbl}</div>
-                  <div style={{ fontSize: 10, color: t.faint, marginTop: 4 }}>{s.sub}</div>
-                </div>
-              ))}
+          {/* ── KPI strip: portfolio summary OR analysis metrics ── */}
+          <div style={{ maxWidth: 1100, margin: "0 auto 28px", padding: "0 40px" }}>
+            {/* Toggle pill */}
+            {!portfolioView && (
+              <button onClick={() => setPortfolioView(true)} style={{ fontSize: 10, color: t.muted, background: "transparent", border: `1px solid ${t.border}`, borderRadius: 20, padding: "3px 11px", cursor: "pointer", marginBottom: 10, display: "flex", alignItems: "center", gap: 5 }}>
+                <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                Back to portfolio view
+              </button>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12 }}>
+              {portfolioView ? (
+                // ── Portfolio summary cards ──
+                [
+                  {
+                    val: String(new Set(analyses.map(a => a.project_name)).size),
+                    lbl: "Projects Imported",
+                    sub: "Active project workspaces",
+                    accent: "#3B82F6",
+                  },
+                  {
+                    val: String(analyses.length),
+                    lbl: "Analyses Loaded",
+                    sub: "Schedule files processed",
+                    accent: "#A78BFA",
+                  },
+                  {
+                    val: analyses.length > 0 ? timeAgo(analyses[0].created_at) : "—",
+                    lbl: "Latest Upload",
+                    sub: "Most recent schedule update",
+                    accent: "#34D399",
+                  },
+                  {
+                    val: k?.total_activities?.toLocaleString() ?? "—",
+                    lbl: "Total Activities",
+                    sub: "From latest analysis",
+                    accent: "#F59E0B",
+                  },
+                ].map(s => (
+                  <div key={s.lbl} style={{ background: t.kpiCard, border: `1px solid ${t.border}`, borderRadius: 14, padding: "16px 18px", position: "relative", overflow: "hidden", boxShadow: isDark ? "none" : "0 1px 4px rgba(0,0,0,.06)" }}>
+                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: s.accent }} />
+                    <div style={{ fontSize: 24, fontWeight: 800, color: t.text, marginBottom: 3 }}>{s.val}</div>
+                    <div style={{ fontSize: 9, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" }}>{s.lbl}</div>
+                    <div style={{ fontSize: 10, color: t.faint, marginTop: 4 }}>{s.sub}</div>
+                  </div>
+                ))
+              ) : k ? (
+                // ── Analysis-specific metrics ──
+                [
+                  { val: `${k.overall_pct_complete}%`, lbl: "Overall Progress",  accent: "#3B82F6",  sub: `${k.total_activities?.toLocaleString()} activities` },
+                  { val: String(k.spi),                lbl: "Schedule SPI",      accent: k.spi >= 1 ? "#34D399" : "#F87171", sub: k.spi >= 1 ? "On schedule" : "Behind rate" },
+                  { val: `${k.critical_path_risk_pct}%`, lbl: "Critical Risk",  accent: "#F59E0B",  sub: `${k.critical_activities?.toLocaleString()} activities` },
+                  { val: k.forecast_end || "—",         lbl: "Forecast End",    accent: "#A78BFA",  sub: k.delay_days > 0 ? `${k.delay_days}d behind` : "On track" },
+                ].map(s => (
+                  <div key={s.lbl} style={{ background: t.kpiCard, border: `1px solid ${t.border}`, borderRadius: 14, padding: "16px 18px", position: "relative", overflow: "hidden", boxShadow: isDark ? "none" : "0 1px 4px rgba(0,0,0,.06)" }}>
+                    <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: s.accent }} />
+                    <div style={{ fontSize: 24, fontWeight: 800, color: t.text, marginBottom: 3 }}>{s.val}</div>
+                    <div style={{ fontSize: 9, color: t.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em" }}>{s.lbl}</div>
+                    <div style={{ fontSize: 10, color: t.faint, marginTop: 4 }}>{s.sub}</div>
+                  </div>
+                ))
+              ) : null}
             </div>
-          )}
+          </div>
         </>
       )}
 
@@ -380,6 +428,18 @@ export default function CompanyHomePage() {
               <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke={t.faint} strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4"/></svg>
               <p style={{ fontSize: 12, fontWeight: 600, color: t.muted, marginTop: 8 }}>New Upload</p>
             </div>
+          </div>
+        )}
+
+        {/* Upload button below carousel */}
+        {!viewAll && analyses.length > 0 && (
+          <div style={{ marginTop: 20, display: "flex", justifyContent: "center" }}>
+            <button onClick={() => setShowUpload(true)} style={{ display: "flex", alignItems: "center", gap: 8, background: t.card, border: `1px solid ${t.border}`, borderRadius: 12, padding: "10px 24px", cursor: "pointer", fontSize: 13, fontWeight: 600, color: t.muted, transition: "all .2s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#93C5FD"; (e.currentTarget as HTMLButtonElement).style.color = "#3B82F6"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = t.border; (e.currentTarget as HTMLButtonElement).style.color = t.muted; }}>
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+              Upload New XER Snapshot
+            </button>
           </div>
         )}
 
