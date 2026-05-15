@@ -103,6 +103,7 @@ export interface AnalysisListItem {
   file_type: "baseline" | "update";
   notes: string | null;
   created_at: string;
+  data_date: string | null;
 }
 
 export interface StoredUser {

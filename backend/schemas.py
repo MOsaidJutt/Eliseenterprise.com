@@ -98,6 +98,7 @@ class AnalysisListItem(BaseModel):
     file_type: str
     notes: Optional[str] = None
     created_at: datetime
+    data_date: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -24,10 +24,19 @@ async def list_analyses(
     total = total_result.scalar_one()
     items_result = await db.execute(q.order_by(desc(models.Analysis.created_at)).offset(offset).limit(limit))
     items = items_result.scalars().all()
-    return schemas.AnalysisListResponse(
-        items=[schemas.AnalysisListItem.model_validate(i) for i in items],
-        total=total,
-    )
+    def _to_item(a: models.Analysis) -> schemas.AnalysisListItem:
+        data_date = None
+        if a.result:
+            data_date = (a.result.get("kpis") or {}).get("data_date") or (
+                a.result.get("data_dates") or [None]
+            )[0]
+        return schemas.AnalysisListItem(
+            id=a.id, project_name=a.project_name, filenames=a.filenames,
+            file_type=a.file_type, notes=a.notes, created_at=a.created_at,
+            data_date=data_date,
+        )
+
+    return schemas.AnalysisListResponse(items=[_to_item(i) for i in items], total=total)
 
 
 @router.get("/{analysis_id}")
