@@ -42,13 +42,18 @@ def compute_kpis(xer: XerData, earliest_xer: "XerData | None" = None) -> dict:
     completed = [t for t in tasks if t.get("status_code") == "TK_Complete"]
     in_progress = [t for t in tasks if t.get("status_code") == "TK_Active"]
 
-    pct_values = []
+    # Weighted average by planned duration — matches P6 project-level rollup
+    weighted_num = 0.0
+    weighted_den = 0.0
     for t in tasks:
         try:
-            pct_values.append(float(t.get("phys_complete_pct", 0)))
-        except ValueError:
+            dur = float(t.get("target_drtn_hr_cnt", 0) or 0)
+            pct = float(t.get("phys_complete_pct", 0) or 0)
+            weighted_num += dur * pct
+            weighted_den += dur
+        except (ValueError, TypeError):
             pass
-    overall_pct = round(sum(pct_values) / len(pct_values), 1) if pct_values else 0
+    overall_pct = round(weighted_num / weighted_den, 1) if weighted_den > 0 else 0
 
     def _get_fa_date(xr: XerData) -> datetime | None:
         for t in xr.tasks:
@@ -345,37 +350,59 @@ def compute_scurve(xer: XerData) -> dict:
 # ── 5. Resource Histogram ────────────────────────────────────────────────────
 
 def compute_resource_histogram(xer: XerData) -> list[dict]:
-    rsrc_map = {r["rsrc_id"]: r for r in xer.rsrc}
     task_map = {t["task_id"]: t for t in xer.tasks}
+    data_date = _parse_date(xer.data_date)
 
     monthly: dict[str, dict] = defaultdict(lambda: {"planned": 0.0, "actual": 0.0})
 
+    def _spread(key: str, start: datetime, end: datetime, qty: float) -> None:
+        """Distribute qty proportionally across calendar months."""
+        if not start or qty == 0:
+            return
+        if not end or end <= start:
+            end = start + timedelta(days=1)
+        total_days = max((end - start).days, 1)
+        cur = start.replace(day=1)
+        while cur <= end:
+            next_m = (cur.replace(day=28) + timedelta(days=4)).replace(day=1)
+            seg_s = max(cur, start)
+            seg_e = min(next_m, end)
+            if seg_e > seg_s:
+                monthly[cur.strftime("%b-%y")][key] += qty * (seg_e - seg_s).days / total_days
+            cur = next_m
+
     for tr in xer.taskrsrc:
         task = task_map.get(tr.get("task_id", ""), {})
-        t_start = _parse_date(task.get("target_start_date", "")) or _parse_date(task.get("act_start_date", ""))
-        if not t_start:
+        if task.get("task_type") in ("TT_LOE", "TT_WBS"):
             continue
-        month_key = t_start.strftime("%b-%y")
         try:
             planned = float(tr.get("target_qty", 0) or 0)
-            actual = float(tr.get("act_reg_qty", 0) or 0)
-            monthly[month_key]["planned"] += planned / 8  # convert hours → days
-            monthly[month_key]["actual"] += actual / 8
+            actual  = float(tr.get("act_reg_qty", 0) or 0) + float(tr.get("act_ot_qty", 0) or 0)
         except (ValueError, TypeError):
-            pass
+            continue
 
-    # Sort chronologically
+        # Planned — spread across target start → target end
+        t_start = _parse_date(task.get("target_start_date", ""))
+        t_end   = _parse_date(task.get("target_end_date", ""))
+        if t_start and planned > 0:
+            _spread("planned", t_start, t_end, planned)
+
+        # Actual — spread across actual start → actual end (or data date if still in progress)
+        a_start = _parse_date(task.get("act_start_date", ""))
+        a_end   = _parse_date(task.get("act_end_date", ""))
+        if a_start and actual > 0:
+            _spread("actual", a_start, a_end or data_date, actual)
+
     def month_order(k: str) -> datetime:
         try:
             return datetime.strptime(k, "%b-%y")
         except ValueError:
             return datetime.max
 
-    result = [
+    return [
         {"month": k, "planned": round(v["planned"]), "actual": round(v["actual"])}
         for k, v in sorted(monthly.items(), key=lambda x: month_order(x[0]))
     ]
-    return result
 
 
 # ── 6. Float Erosion ─────────────────────────────────────────────────────────
