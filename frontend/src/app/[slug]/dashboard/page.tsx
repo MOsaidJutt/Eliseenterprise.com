@@ -115,8 +115,7 @@ function CompanyDashboardInner() {
             {company?.logo_url ? (
               <img src={company.logo_url} alt={company.name} className="h-7 w-auto object-contain" />
             ) : (
-              <img src="/plainview-logo.png" alt="PlainView" className="h-7 w-auto object-contain max-w-[100px]"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              <div style={{ width: 28, height: 28, background: "linear-gradient(135deg,#1E40AF,#3B82F6)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, color: "#fff", flexShrink: 0, boxShadow: "0 2px 6px rgba(30,64,175,.4)" }}>P</div>
             )}
             <div className="min-w-0">
               <p className="font-bold truncate" style={{ fontSize: 12, color: "#E2E8F0", lineHeight: 1.3 }}>{company?.name || slug}</p>
