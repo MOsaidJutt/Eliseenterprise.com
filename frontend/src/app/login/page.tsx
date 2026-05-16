@@ -37,17 +37,13 @@ export default function LoginPage() {
         <div>
           {/* Logo */}
           <div className="mb-14">
-            <img
-              src="/plainview-logo.png"
-              alt="PlainView"
-              className="h-9 w-auto object-contain object-left max-w-[200px]"
-              onError={(e) => {
-                const el = e.target as HTMLImageElement;
-                el.style.display = "none";
-                el.parentElement!.insertAdjacentHTML("afterbegin",
-                  '<div style="display:flex;align-items:center;gap:10px"><div style="width:36px;height:36px;background:#1E40AF;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#fff">P</div><div><p style="font-weight:700;font-size:14px;color:#E2E8F0;line-height:1.2">PlainView</p><p style="font-size:11px;color:#64748B">Elise Enterprise</p></div></div>');
-              }}
-            />
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 36, height: 36, background: "linear-gradient(135deg,#1E40AF,#3B82F6)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 16, color: "#fff", flexShrink: 0, boxShadow: "0 4px 12px rgba(30,64,175,.45)" }}>P</div>
+              <div>
+                <p style={{ fontWeight: 700, fontSize: 14, color: "#E2E8F0", lineHeight: 1.2 }}>PlainView</p>
+                <p style={{ fontSize: 11, color: "#64748B" }}>Elise Enterprise</p>
+              </div>
+            </div>
           </div>
 
           <div className="mb-10">
@@ -94,8 +90,10 @@ export default function LoginPage() {
 
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8">
-            <img src="/plainview-logo.png" alt="PlainView" className="h-8 w-auto object-contain max-w-[160px]"
-              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 30, height: 30, background: "linear-gradient(135deg,#1E40AF,#3B82F6)", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, color: "#fff", boxShadow: "0 2px 8px rgba(30,64,175,.4)" }}>P</div>
+              <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>PlainView</span>
+            </div>
           </div>
 
           {/* Heading */}
