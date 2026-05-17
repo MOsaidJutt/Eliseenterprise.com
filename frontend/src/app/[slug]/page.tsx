@@ -194,10 +194,11 @@ export default function CompanyHomePage() {
 
       {/* ── Page header ── */}
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "36px 40px 20px" }}>
-        <h1 style={{ fontSize: 26, fontWeight: 800, color: t.text, marginBottom: 4 }}>
-          Good {greeting}, {user?.name?.split(" ")[0] || "there"}.
+        <h1 style={{ fontSize: 26, fontWeight: 800, color: t.text, marginBottom: 4, lineHeight: 1.25 }}>
+          Good {greeting}, {user?.name?.split(" ")[0] || "there"}.<br />
+          <span style={{ color: "#3B82F6" }}>Your programme health</span> at a glance.
         </h1>
-        <p style={{ fontSize: 13, color: t.muted }}>{projects.length} project{projects.length !== 1 ? "s" : ""} · {analyses.length} analyses loaded</p>
+        <p style={{ fontSize: 13, color: t.muted, marginTop: 6 }}>Plainview · Elise Enterprise</p>
       </div>
 
       {/* ── Summary strip ── */}
