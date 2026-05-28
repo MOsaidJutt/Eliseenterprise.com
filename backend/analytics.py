@@ -460,13 +460,19 @@ def compute_float_erosion(xers: list[XerData]) -> list[dict]:
 
 # ── 7. Milestone Tracker ─────────────────────────────────────────────────────
 
-def compute_milestones(xer: XerData) -> list[dict]:
+def compute_milestones(xer: XerData, spi: float = 1.0) -> list[dict]:
     milestones = [t for t in xer.tasks if t.get("task_type") == "TT_Mile"]
+    data_date = _parse_date(xer.data_date)
     rows = []
     for m in milestones:
         bl = _parse_date(m.get("target_start_date", ""))
         act = _parse_date(m.get("act_start_date", ""))
+        # Use P6's CPM-computed early start; fall back to formula: Data Date + (Remaining Duration ÷ SPI)
         fc = _parse_date(m.get("early_start_date", "") or m.get("restart_date", ""))
+        if not fc and data_date and spi > 0:
+            rem_hrs = float(m.get("remain_drtn_hr_cnt", 0) or 0)
+            rem_days = rem_hrs / 8
+            fc = data_date + timedelta(days=rem_days / spi)
         status = m.get("status_code", "")
 
         if status == "TK_Complete":
@@ -663,7 +669,7 @@ def compute_all(xers: list[XerData]) -> dict:
     scurve = compute_scurve(latest)
     resources = compute_resource_histogram(latest)
     float_erosion = compute_float_erosion(sorted_xers)
-    milestones = compute_milestones(latest)
+    milestones = compute_milestones(latest, spi=kpis.get("spi", 1.0))
     critical = compute_critical_path(latest)
     observations = compute_observations(kpis, ppc, float_erosion)
     gantt = compute_gantt(latest)
