@@ -25,17 +25,22 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
+
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+
+if not DATABASE_URL:
+    DATABASE_URL = "sqlite+aiosqlite:///./app.db"
+
 if DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 elif DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
 
-# asyncpg doesn't accept libpq-style params like sslmode — strip them
-from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
-_parsed = urlparse(DATABASE_URL)
-_qs = {k: v for k, v in parse_qs(_parsed.query).items() if k not in ("sslmode",)}
-DATABASE_URL = urlunparse(_parsed._replace(query=urlencode(_qs, doseq=True)))
+if "asyncpg" in DATABASE_URL:
+    _parsed = urlparse(DATABASE_URL)
+    _qs = {k: v for k, v in parse_qs(_parsed.query).items() if k not in ("sslmode",)}
+    DATABASE_URL = urlunparse(_parsed._replace(query=urlencode(_qs, doseq=True)))
 
 config.set_main_option("sqlalchemy.url", DATABASE_URL)
 
@@ -63,7 +68,7 @@ async def run_async_migrations() -> None:
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        connect_args={"ssl": "require"} if "neon" in DATABASE_URL else {},
+        connect_args={"ssl": "require"} if "neon" in DATABASE_URL else {} if "asyncpg" in DATABASE_URL else {},
     )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
