@@ -121,6 +121,10 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-white/10 py-8 text-center text-white/20 text-xs">
         Plainview · Elise Enterprise · Built by Redline Intelligence
+        <span className="mx-2">·</span>
+        <a href="/privacy" className="text-white/30 hover:text-white/60 transition-colors" style={{ textDecoration: "none" }}>
+          Privacy Policy
+        </a>
       </footer>
     </main>
   );
