@@ -1,0 +1,11 @@
+# Replace with your real domain once DNS is pointed at this VPS — Caddy will
+# automatically request and renew a Let's Encrypt TLS certificate for it.
+your-domain.com {
+    reverse_proxy app:3000
+}
+
+# No domain yet? Comment the block above and uncomment this one to serve
+# plain HTTP on the VPS's bare IP while you test (no TLS in this mode):
+# :80 {
+#     reverse_proxy app:3000
+# }
