@@ -1,8 +1,7 @@
-const CACHE = 'p6-analytics-v1';
-const PRECACHE = ['/', '/login/', '/dashboard/'];
+const CACHE = 'p6-analytics-v2';
+const STATIC_PATH = '/_next/static/';
 
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)).catch(() => {}));
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
@@ -16,16 +15,31 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Never cache API calls or POST requests
-  if (e.request.method !== 'GET' || e.request.url.includes('/api/')) return;
+  const req = e.request;
+  if (req.method !== 'GET' || req.url.includes('/api/')) return;
 
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      const network = fetch(e.request).then(res => {
-        if (res.ok) caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+  const url = new URL(req.url);
+
+  // Immutable, content-hashed build output — safe to serve from cache first.
+  if (url.pathname.startsWith(STATIC_PATH)) {
+    e.respondWith(
+      caches.match(req).then(cached => cached || fetch(req).then(res => {
+        if (res.ok) caches.open(CACHE).then(c => c.put(req, res.clone()));
         return res;
-      });
-      return cached || network;
-    })
+      }))
+    );
+    return;
+  }
+
+  // Everything else — HTML pages, the app shell — must always prefer the
+  // network. These change on every deploy and can carry stale auth/session
+  // logic; serving a cached copy here is what let old, buggy versions of
+  // the app keep running indefinitely on some devices. Cache is only a
+  // fallback for when the network is truly unreachable (offline).
+  e.respondWith(
+    fetch(req).then(res => {
+      if (res.ok) caches.open(CACHE).then(c => c.put(req, res.clone()));
+      return res;
+    }).catch(() => caches.match(req))
   );
 });
