@@ -388,7 +388,10 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (!isLoggedIn()) { router.replace("/login"); return; }
-    if (currentUser?.role !== "admin") { router.replace("/dashboard"); return; }
+    // Only bounce away on a confirmed non-admin role. A missing cached user
+    // object (e.g. a stale/partial local write) isn't proof of that — let
+    // the admin-only API calls below be the source of truth instead.
+    if (currentUser && currentUser.role !== "admin") { router.replace("/dashboard"); return; }
 
     async function loadAll() {
       try {

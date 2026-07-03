@@ -4,7 +4,7 @@ import { downloadPDF } from "@/lib/downloadPDF";
 import PDFProgressModal from "@/components/PDFProgressModal";
 import { useParams, useRouter } from "next/navigation";
 import { AnalysisResult, fetchAnalysis, fetchCompany, CompanyInfo } from "@/lib/api";
-import { isLoggedIn, clearToken, getUser, getUploadPath } from "@/lib/auth";
+import { isLoggedIn, clearToken, getUser } from "@/lib/auth";
 import KPISummary from "@/components/KPISummary";
 import SCurve from "@/components/SCurve";
 import SPIByContractor from "@/components/SPIByContractor";
@@ -37,6 +37,7 @@ function AnalysisDashboardInner() {
   const analysisId = Number(params.analysisId);
   const router = useRouter();
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [company, setCompany] = useState<CompanyInfo | null>(null);
   const [active, setActive] = useState("executive");
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -54,11 +55,20 @@ function AnalysisDashboardInner() {
     } catch { /* silent */ }
   }, [slug, router]);
 
+  const loadThisAnalysis = useCallback(() => {
+    setLoadError(null);
+    fetchAnalysis(analysisId)
+      .then(setResult)
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Failed to load this analysis.");
+      });
+  }, [analysisId]);
+
   useEffect(() => {
     if (!isLoggedIn()) { router.replace("/login"); return; }
     fetchCompany(slug).then(setCompany).catch(() => {});
-    fetchAnalysis(analysisId).then(setResult).catch(() => router.replace(getUploadPath()));
-  }, [slug, analysisId, router]);
+    loadThisAnalysis();
+  }, [slug, analysisId, router, loadThisAnalysis]);
 
   useEffect(() => {
     const handler = () => {
@@ -72,6 +82,25 @@ function AnalysisDashboardInner() {
   }, []);
 
   if (!result) {
+    if (loadError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center px-6" style={{ background: "var(--bg-app)" }}>
+          <div className="text-center max-w-sm">
+            <p style={{ fontSize: 14, color: "var(--danger, #DC2626)", marginBottom: 16 }}>{loadError}</p>
+            <div className="flex items-center justify-center gap-3">
+              <button onClick={loadThisAnalysis}
+                style={{ background: "var(--primary)", color: "#fff", fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "none", cursor: "pointer" }}>
+                Try Again
+              </button>
+              <button onClick={() => router.push(`/${slug}`)}
+                style={{ background: "transparent", color: "var(--text-muted)", fontSize: 13, fontWeight: 600, padding: "8px 16px", borderRadius: 8, border: "1px solid var(--border)", cursor: "pointer" }}>
+                Back to Projects
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-app)" }}>
         <div className="text-center">

@@ -12,13 +12,23 @@ export interface StoredUser {
 
 export function setToken(token: string, user: StoredUser): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
+  try {
+    localStorage.setItem(TOKEN_KEY, token);
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+  } catch {
+    throw new Error(
+      "Unable to save your session. If Private Browsing or \"Block All Cookies\" is enabled in Safari, please disable it and try again."
+    );
+  }
 }
 
 export function getToken(): string {
   if (typeof window === "undefined") return "";
-  return localStorage.getItem(TOKEN_KEY) ?? "";
+  try {
+    return localStorage.getItem(TOKEN_KEY) ?? "";
+  } catch {
+    return "";
+  }
 }
 
 export function getUser(): StoredUser | null {
@@ -37,19 +47,28 @@ export function isLoggedIn(): boolean {
 
 export function clearToken(): void {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  } catch {
+    // ignore — nothing to clean up if storage isn't accessible
+  }
 }
 
 export function isAdmin(): boolean {
   return getUser()?.role === "admin";
 }
 
+// Callers only reach this once isLoggedIn() is already true, so a missing
+// cached user (e.g. after a partial localStorage write) must never fall
+// back to "/login" — that would sign out a user who is still holding a
+// valid token. Fall back to the public landing page instead, which is
+// always safe to show regardless of role.
 export function getUploadPath(): string {
   const user = getUser();
   if (user?.role === "admin") return "/admin";
   const slug = user?.company_slug;
-  return slug ? `/${slug}` : "/login";
+  return slug ? `/${slug}` : "/";
 }
 
 export function authHeader(): Record<string, string> {
