@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { isLoggedIn, getUser, clearToken } from "@/lib/auth";
+import { logEvent } from "@/lib/debugLog";
 import {
   fetchAdminStats,
   fetchAdminCompanies,
@@ -387,11 +388,15 @@ export default function AdminPage() {
   const currentUser = getUser();
 
   useEffect(() => {
-    if (!isLoggedIn()) { router.replace("/login"); return; }
+    logEvent(`admin page mounted isLoggedIn=${isLoggedIn()} currentUser=${currentUser ? JSON.stringify(currentUser) : "null"}`);
+    if (!isLoggedIn()) { logEvent("admin: not logged in -> /login"); router.replace("/login"); return; }
     // Only bounce away on a confirmed non-admin role. A missing cached user
     // object (e.g. a stale/partial local write) isn't proof of that — let
     // the admin-only API calls below be the source of truth instead.
-    if (currentUser && currentUser.role !== "admin") { router.replace("/dashboard"); return; }
+    if (currentUser && currentUser.role !== "admin") {
+      logEvent(`admin: currentUser.role="${currentUser.role}" !== admin -> /dashboard`);
+      router.replace("/dashboard"); return;
+    }
 
     async function loadAll() {
       try {
@@ -403,8 +408,11 @@ export default function AdminPage() {
         setStats(s);
         setCompanies(c);
         setUsers(u);
+        logEvent("admin: loadAll ok");
       } catch (err) {
-        setGlobalError(err instanceof Error ? err.message : "Failed to load admin data");
+        const msg = err instanceof Error ? err.message : "Failed to load admin data";
+        logEvent(`admin: loadAll FAILED — ${msg}`);
+        setGlobalError(msg);
         setLoadingStats(false);
         setLoadingCompanies(false);
         setLoadingUsers(false);

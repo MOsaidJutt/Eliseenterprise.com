@@ -7,6 +7,7 @@ import {
   DuplicateAnalysis, DuplicateResponse,
 } from "@/lib/api";
 import { isLoggedIn, clearToken, getUser } from "@/lib/auth";
+import { logEvent } from "@/lib/debugLog";
 
 type TaggedFile = { file: File; type: "baseline" | "update" };
 
@@ -80,9 +81,11 @@ export default function CompanyHomePage() {
   }
 
   useEffect(() => {
-    if (!isLoggedIn()) { router.replace("/login"); return; }
+    logEvent(`[slug] page mounted for slug="${slug}", isLoggedIn=${isLoggedIn()}`);
+    if (!isLoggedIn()) { logEvent("[slug]: not logged in -> /login"); router.replace("/login"); return; }
     Promise.all([fetchCompany(slug), fetchAnalyses({ limit: 50 })])
       .then(([co, res]) => {
+        logEvent("[slug]: fetchCompany + fetchAnalyses ok");
         setCompany(co);
         const items = res.items ?? [];
         setAnalyses(items);
@@ -96,7 +99,9 @@ export default function CompanyHomePage() {
             }).catch(() => {});
           }
         }
-      }).catch(() => {}).finally(() => setLoading(false));
+      }).catch((err) => {
+        logEvent(`[slug]: fetchCompany/fetchAnalyses FAILED — ${err instanceof Error ? err.message : String(err)}`);
+      }).finally(() => setLoading(false));
   }, [slug, router]);
 
   // Group analyses by project name

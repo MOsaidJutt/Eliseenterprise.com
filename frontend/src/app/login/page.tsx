@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginUser } from "@/lib/api";
 import { setToken } from "@/lib/auth";
+import { logEvent, clearLog } from "@/lib/debugLog";
 
 export default function LoginPage() {
   const [email,    setEmail]    = useState("");
@@ -17,12 +18,20 @@ export default function LoginPage() {
     if (!email || !password) { setError("Please fill in all fields."); return; }
     setLoading(true);
     setError("");
+    clearLog();
+    logEvent(`login: submitting for ${email}`);
     try {
       const { access_token, user } = await loginUser(email, password);
+      logEvent(`login: API ok — role=${user.role} company_slug=${user.company_slug ?? "null"}`);
       setToken(access_token, user);
-      router.replace(user.company_slug ? `/${user.company_slug}` : "/admin");
+      logEvent("login: setToken ok");
+      const dest = user.company_slug ? `/${user.company_slug}` : "/admin";
+      logEvent(`login: redirecting to ${dest}`);
+      router.replace(dest);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      const msg = err instanceof Error ? err.message : "Login failed";
+      logEvent(`login: FAILED — ${msg}`);
+      setError(msg);
     } finally {
       setLoading(false);
     }

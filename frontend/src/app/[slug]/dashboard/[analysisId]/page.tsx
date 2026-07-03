@@ -5,6 +5,7 @@ import PDFProgressModal from "@/components/PDFProgressModal";
 import { useParams, useRouter } from "next/navigation";
 import { AnalysisResult, fetchAnalysis, fetchCompany, CompanyInfo } from "@/lib/api";
 import { isLoggedIn, clearToken, getUser } from "@/lib/auth";
+import { logEvent } from "@/lib/debugLog";
 import KPISummary from "@/components/KPISummary";
 import SCurve from "@/components/SCurve";
 import SPIByContractor from "@/components/SPIByContractor";
@@ -57,15 +58,22 @@ function AnalysisDashboardInner() {
 
   const loadThisAnalysis = useCallback(() => {
     setLoadError(null);
+    logEvent(`[analysisId]: fetchAnalysis(${analysisId}) starting`);
     fetchAnalysis(analysisId)
-      .then(setResult)
+      .then((data) => {
+        logEvent(`[analysisId]: fetchAnalysis(${analysisId}) ok`);
+        setResult(data);
+      })
       .catch((err) => {
-        setLoadError(err instanceof Error ? err.message : "Failed to load this analysis.");
+        const msg = err instanceof Error ? err.message : "Failed to load this analysis.";
+        logEvent(`[analysisId]: fetchAnalysis(${analysisId}) FAILED — ${msg}`);
+        setLoadError(msg);
       });
   }, [analysisId]);
 
   useEffect(() => {
-    if (!isLoggedIn()) { router.replace("/login"); return; }
+    logEvent(`[analysisId] page mounted slug="${slug}" id=${analysisId} isLoggedIn=${isLoggedIn()}`);
+    if (!isLoggedIn()) { logEvent("[analysisId]: not logged in -> /login"); router.replace("/login"); return; }
     fetchCompany(slug).then(setCompany).catch(() => {});
     loadThisAnalysis();
   }, [slug, analysisId, router, loadThisAnalysis]);

@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnalysisResult, fetchAnalysis } from "@/lib/api";
 import { isLoggedIn, clearToken, getUser, getUploadPath } from "@/lib/auth";
+import { logEvent } from "@/lib/debugLog";
 import KPISummary from "@/components/KPISummary";
 import SCurve from "@/components/SCurve";
 import SPIByContractor from "@/components/SPIByContractor";
@@ -55,13 +56,19 @@ function DashboardInner() {
   }, []);
 
   useEffect(() => {
-    if (!isLoggedIn()) { router.replace("/login"); return; }
+    logEvent(`/dashboard mounted isLoggedIn=${isLoggedIn()}`);
+    if (!isLoggedIn()) { logEvent("/dashboard: not logged in -> /login"); router.replace("/login"); return; }
     // Check for analysis_id in query string (deep link)
     const aid = searchParams.get("analysis_id");
-    if (aid) { loadAnalysis(Number(aid)); return; }
+    if (aid) { logEvent(`/dashboard: analysis_id=${aid} in query -> loadAnalysis`); loadAnalysis(Number(aid)); return; }
     // Fall back to sessionStorage
     const raw = sessionStorage.getItem("analysisResult");
-    if (!raw) { router.replace(getUploadPath()); return; }
+    if (!raw) {
+      logEvent("/dashboard: no cached analysisResult -> getUploadPath()");
+      router.replace(getUploadPath());
+      return;
+    }
+    logEvent("/dashboard: using cached analysisResult");
     setResult(JSON.parse(raw));
   }, [router, searchParams, loadAnalysis]);
 
@@ -245,7 +252,7 @@ function DashboardInner() {
           <section id="observations"><ObservationsPanel observations={result.observations} /></section>
           <section id="scurve" className="print-break"><SCurve data={result.scurve} /></section>
 
-          {result.gantt && result.gantt.tasks.length > 0 && (
+          {result.gantt && result.gantt.rows.length > 0 && (
             <section id="gantt" className="print-break">
               <GanttChart data={result.gantt} />
             </section>

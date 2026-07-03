@@ -5,6 +5,7 @@ import { downloadPDF } from "@/lib/downloadPDF";
 import PDFProgressModal from "@/components/PDFProgressModal";
 import { AnalysisResult, fetchAnalysis, fetchCompany, CompanyInfo } from "@/lib/api";
 import { isLoggedIn, clearToken, getUser, getUploadPath } from "@/lib/auth";
+import { logEvent } from "@/lib/debugLog";
 import KPISummary from "@/components/KPISummary";
 import SCurve from "@/components/SCurve";
 import SPIByContractor from "@/components/SPIByContractor";
@@ -57,12 +58,18 @@ function CompanyDashboardInner() {
   }, [slug, router]);
 
   useEffect(() => {
-    if (!isLoggedIn()) { router.replace("/login"); return; }
+    logEvent(`[slug]/dashboard mounted for slug="${slug}", isLoggedIn=${isLoggedIn()}`);
+    if (!isLoggedIn()) { logEvent("[slug]/dashboard: not logged in -> /login"); router.replace("/login"); return; }
     fetchCompany(slug).then(setCompany).catch(() => {});
     const aid = searchParams.get("analysis_id");
-    if (aid) { loadAnalysis(Number(aid)); return; }
+    if (aid) { logEvent(`[slug]/dashboard: analysis_id=${aid} in query -> loadAnalysis`); loadAnalysis(Number(aid)); return; }
     const raw = sessionStorage.getItem("analysisResult");
-    if (!raw) { router.replace(getUploadPath()); return; }
+    if (!raw) {
+      logEvent("[slug]/dashboard: no cached analysisResult in sessionStorage -> getUploadPath()");
+      router.replace(getUploadPath());
+      return;
+    }
+    logEvent("[slug]/dashboard: using cached analysisResult from sessionStorage");
     setResult(JSON.parse(raw));
   }, [slug, router, searchParams, loadAnalysis]);
 
@@ -235,7 +242,7 @@ function CompanyDashboardInner() {
           <section id="kpi"><KPISummary kpis={result.kpis} /></section>
           <section id="observations"><ObservationsPanel observations={result.observations} /></section>
           <section id="scurve"><SCurve data={result.scurve} /></section>
-          {result.gantt && result.gantt.tasks.length > 0 && (
+          {result.gantt && result.gantt.rows.length > 0 && (
             <section id="gantt"><GanttChart data={result.gantt} /></section>
           )}
           <section id="performance">
