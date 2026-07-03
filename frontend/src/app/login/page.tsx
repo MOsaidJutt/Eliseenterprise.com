@@ -25,9 +25,19 @@ export default function LoginPage() {
       logEvent(`login: API ok — role=${user.role} company_slug=${user.company_slug ?? "null"}`);
       setToken(access_token, user);
       logEvent("login: setToken ok");
-      const dest = user.company_slug ? `/${user.company_slug}` : "/admin";
-      logEvent(`login: redirecting to ${dest}`);
-      router.replace(dest);
+      // Redirect must be based on the actual role, never inferred from
+      // company_slug's presence — a non-admin user with no company assigned
+      // is a real (if unusual) account state, not proof of being an admin.
+      if (user.role === "admin") {
+        logEvent("login: redirecting to /admin");
+        router.replace("/admin");
+      } else if (user.company_slug) {
+        logEvent(`login: redirecting to /${user.company_slug}`);
+        router.replace(`/${user.company_slug}`);
+      } else {
+        logEvent("login: user has no company assigned — showing error instead of redirecting");
+        setError("Your account isn't linked to a company yet. Contact your administrator.");
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Login failed";
       logEvent(`login: FAILED — ${msg}`);
