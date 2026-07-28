@@ -66,27 +66,18 @@ export interface CriticalActivity {
   status: string; pct_complete: string; forecast_end: string;
 }
 
-export interface GanttWbsRow {
-  type: "wbs";
-  id: string; parent_id: string | null;
-  name: string; depth: number;
-  rollup_start: string; rollup_end: string; rollup_count: number;
+export interface GanttTask {
+  id: string; code: string; name: string;
+  wbs_id: string; wbs_name: string; wbs_path: string; wbs_level: number;
+  planned_start: string; planned_finish: string;
+  actual_start: string; actual_finish: string;
+  early_start: string; early_finish: string;
+  status: string; pct_complete: number;
+  is_critical: boolean; total_float_days: number; duration_days: number;
 }
-
-export interface GanttTaskRow {
-  type: "task";
-  id: string; parent_id: string;
-  code: string; name: string; depth: number;
-  start: string; end: string;
-  baseline_start: string; baseline_end: string;
-  status: string; pct: number;
-  is_mile: boolean; critical: boolean; float: number; duration_days: number;
-}
-
-export type GanttRow = GanttWbsRow | GanttTaskRow;
 
 export interface GanttData {
-  rows: GanttRow[]; project_start: string; project_end: string; data_date: string;
+  tasks: GanttTask[]; project_start: string; project_end: string; data_date: string;
 }
 
 export interface AnalysisResult {
