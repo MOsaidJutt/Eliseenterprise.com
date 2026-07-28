@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { isLoggedIn, getUser, clearToken } from "@/lib/auth";
+import { isLoggedIn, getUser, clearToken, updateCachedCompany } from "@/lib/auth";
 import { logEvent } from "@/lib/debugLog";
 import {
   fetchAdminStats,
@@ -12,7 +12,7 @@ import {
   deleteAdminCompany,
   createAdminUser,
   updateAdminUser,
-  deactivateAdminUser,
+  deleteAdminUserPermanently,
   AdminStats,
   CompanyWithStats,
   AdminUser,
@@ -55,14 +55,17 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 
 // ── Form field ────────────────────────────────────────────────────────────────
 function Field({
-  label, value, onChange, type = "text", placeholder, children,
+  label, value, onChange, type = "text", placeholder, children, required,
 }: {
   label: string; value?: string; onChange?: (v: string) => void;
-  type?: string; placeholder?: string; children?: React.ReactNode;
+  type?: string; placeholder?: string; children?: React.ReactNode; required?: boolean;
 }) {
   return (
     <div className="mb-4">
-      <label className="block text-xs font-medium text-slate-400 mb-1.5">{label}</label>
+      <label className="block text-xs font-medium text-slate-400 mb-1.5">
+        {label}
+        {required && <span className="text-red-400 ml-0.5">*</span>}
+      </label>
       {children ?? (
         <input
           type={type}
@@ -73,6 +76,34 @@ function Field({
         />
       )}
     </div>
+  );
+}
+
+// ── Select ────────────────────────────────────────────────────────────────────
+// Native dropdown lists are painted by the OS, which ignores the translucent
+// `bg-white/[0.04]` used elsewhere — it composites over the popup's own white
+// base, leaving light text on a near-white background. A solid colour plus
+// `color-scheme: dark` (and explicit per-option colours below) is what actually
+// reaches the popup.
+const SELECT_CLASS =
+  "w-full bg-[#0F1B2E] border border-white/[0.1] rounded-xl px-3 py-2.5 text-sm " +
+  "text-slate-200 focus:outline-none focus:border-blue-500/60 transition-all cursor-pointer";
+
+export const OPTION_STYLE = { background: "#0F1B2E", color: "#E2E8F0" } as const;
+
+function Select({
+  value, onChange, children, className = "", ...rest
+}: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <select
+      value={value}
+      onChange={onChange}
+      style={{ colorScheme: "dark" }}
+      className={`${SELECT_CLASS} ${className}`}
+      {...rest}
+    >
+      {children}
+    </select>
   );
 }
 
@@ -233,6 +264,12 @@ function AddUserModal({
       setError("Name, email, and password are required.");
       return;
     }
+    // A user with no company has no workspace to upload into, so this is
+    // enforced rather than merely encouraged.
+    if (companyId === null) {
+      setError("Please select a company for this user.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -255,30 +292,31 @@ function AddUserModal({
   return (
     <Modal title="Add User" onClose={onClose}>
       <form onSubmit={handleSubmit}>
-        <Field label="Full Name" value={name} onChange={setName} placeholder="Jane Smith" />
-        <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="jane@example.com" />
-        <Field label="Password" value={password} onChange={setPassword} type="password" placeholder="••••••••" />
-        <Field label="Role">
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as "admin" | "user")}
-            className="w-full bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500/60 transition-all"
-          >
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-          </select>
+        <Field label="Full Name" value={name} onChange={setName} placeholder="Jane Smith" required />
+        <Field label="Email" value={email} onChange={setEmail} type="email" placeholder="jane@example.com" required />
+        <Field label="Password" value={password} onChange={setPassword} type="password" placeholder="••••••••" required />
+        <Field label="Role" required>
+          <Select value={role} onChange={(e) => setRole(e.target.value as "admin" | "user")}>
+            <option value="user" style={OPTION_STYLE}>User</option>
+            <option value="admin" style={OPTION_STYLE}>Admin</option>
+          </Select>
         </Field>
-        <Field label="Company">
-          <select
+        <Field label="Company" required>
+          <Select
             value={companyId ?? ""}
             onChange={(e) => setCompanyId(e.target.value ? Number(e.target.value) : null)}
-            className="w-full bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500/60 transition-all"
+            required
           >
-            <option value="">— No company —</option>
+            <option value="" disabled style={OPTION_STYLE}>— Select a company —</option>
             {companies.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id} style={OPTION_STYLE}>{c.name}</option>
             ))}
-          </select>
+          </Select>
+          {companies.length === 0 && (
+            <p className="text-amber-400/80 text-[11px] mt-1.5">
+              No clients exist yet — create one in the Clients tab first.
+            </p>
+          )}
         </Field>
         {error && (
           <p className="text-red-400 text-xs mb-3 bg-red-500/[0.08] border border-red-500/20 px-3 py-2 rounded-lg">{error}</p>
@@ -301,6 +339,82 @@ function AddUserModal({
           </button>
         </div>
       </form>
+    </Modal>
+  );
+}
+
+// ── Delete User Confirm Dialog ────────────────────────────────────────────────
+function DeleteUserDialog({
+  user,
+  onClose,
+  onDeleted,
+}: {
+  user: AdminUser;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [confirmText, setConfirmText] = useState("");
+
+  const canDelete = confirmText.trim().toLowerCase() === "delete";
+
+  async function handleDelete() {
+    if (!canDelete) return;
+    setLoading(true);
+    setError("");
+    try {
+      await deleteAdminUserPermanently(user.id);
+      onDeleted();
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete user");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Modal title="Delete User" onClose={onClose}>
+      <p className="text-slate-300 text-sm mb-3">
+        Permanently delete <span className="font-semibold text-white">{user.name}</span>
+        <span className="text-slate-500"> ({user.email})</span>?
+      </p>
+      <ul className="text-slate-500 text-xs mb-4 space-y-1.5 list-disc pl-4">
+        <li>The account is removed and can no longer sign in.</li>
+        <li>Their schedule analyses are <span className="text-slate-300">kept</span> and transferred to your account, so the client&apos;s history stays intact.</li>
+        <li>Their private AI chat history is deleted.</li>
+      </ul>
+      <p className="text-slate-500 text-xs mb-2">
+        To confirm, type <span className="font-mono text-slate-300">delete</span> below.
+      </p>
+      <input
+        value={confirmText}
+        onChange={(e) => setConfirmText(e.target.value)}
+        placeholder="delete"
+        autoFocus
+        className="w-full bg-white/[0.04] border border-white/[0.1] rounded-xl px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-red-500/60 transition-all mb-4"
+      />
+      {error && (
+        <p className="text-red-400 text-xs mb-3 bg-red-500/[0.08] border border-red-500/20 px-3 py-2 rounded-lg">{error}</p>
+      )}
+      <div className="flex gap-2 justify-end">
+        <button
+          type="button"
+          onClick={onClose}
+          className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-slate-200 border border-white/[0.08] rounded-xl transition-colors"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleDelete}
+          disabled={loading || !canDelete}
+          className="px-4 py-2 text-xs font-semibold bg-red-600 hover:bg-red-500 disabled:bg-red-900/40 disabled:cursor-not-allowed text-white rounded-xl transition-all flex items-center gap-2"
+        >
+          {loading && <Spinner />}
+          Delete Permanently
+        </button>
+      </div>
     </Modal>
   );
 }
@@ -384,8 +498,19 @@ export default function AdminPage() {
   const [showAddUser, setShowAddUser] = useState(false);
   const [renameTarget, setRenameTarget] = useState<CompanyWithStats | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CompanyWithStats | null>(null);
+  const [deleteUserTarget, setDeleteUserTarget] = useState<AdminUser | null>(null);
 
   const currentUser = getUser();
+
+  // Prefer the server's view of which client this admin belongs to; the cached
+  // login payload is only a fallback for the first paint, before /users loads.
+  const myServerRecord = users.find((u) => u.id === currentUser?.id);
+  const workspaceSlug =
+    (myServerRecord?.company_id
+      ? companies.find((c) => c.id === myServerRecord.company_id)?.slug
+      : null) ??
+    currentUser?.company_slug ??
+    null;
 
   useEffect(() => {
     logEvent(`admin page mounted isLoggedIn=${isLoggedIn()} currentUser=${currentUser ? JSON.stringify(currentUser) : "null"}`);
@@ -454,6 +579,22 @@ export default function AdminPage() {
     }
   }
 
+  async function handleChangeCompany(user: AdminUser, companyId: number) {
+    if (!companyId || companyId === user.company_id) return;
+    try {
+      await updateAdminUser(user.id, { company_id: companyId });
+      await reloadUsers();
+      await reloadCompanies();
+      // Own company drives this admin's workspace link, so refresh the cache.
+      if (user.id === currentUser?.id) {
+        const slug = companies.find((c) => c.id === companyId)?.slug ?? null;
+        if (slug) updateCachedCompany(companyId, slug);
+      }
+    } catch (err) {
+      setGlobalError(err instanceof Error ? err.message : "Failed to change company");
+    }
+  }
+
   async function handleToggleRole(user: AdminUser) {
     const newRole = user.role === "admin" ? "user" : "admin";
     try {
@@ -493,6 +634,31 @@ export default function AdminPage() {
             <span className="font-bold text-sm text-slate-200">Plainview Admin</span>
           </div>
           <div className="flex items-center gap-4">
+            {/* Admins are users too — this is their route into a workspace,
+                where uploading and analysing actually happens. */}
+            {workspaceSlug ? (
+              <button
+                onClick={() => router.push(`/${workspaceSlug}`)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition-all shadow-lg shadow-blue-900/20"
+                title={`Open your workspace (/${workspaceSlug}) to upload and analyse XER files`}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Upload XER
+              </button>
+            ) : (
+              <button
+                onClick={() => setTab("users")}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-amber-500/30 text-amber-400 hover:border-amber-500/60 text-xs font-semibold rounded-xl transition-all"
+                title="Assign your account to a client in the Users tab to enable uploads"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                No workspace
+              </button>
+            )}
             <span className="text-slate-500 text-xs">{currentUser?.email}</span>
             <button
               onClick={() => { clearToken(); router.replace("/login"); }}
@@ -511,6 +677,21 @@ export default function AdminPage() {
         {globalError && (
           <div className="mb-6 bg-red-500/[0.08] border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl">
             {globalError}
+          </div>
+        )}
+
+        {!loadingUsers && !loadingCompanies && !workspaceSlug && (
+          <div className="mb-6 bg-amber-500/[0.07] border border-amber-500/20 text-amber-300/90 text-sm px-4 py-3 rounded-xl flex items-start gap-3">
+            <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="font-medium">Your account isn&apos;t linked to a client yet</p>
+              <p className="text-amber-300/60 text-xs mt-0.5">
+                Uploading and analysing happens inside a client workspace. Pick a client for
+                your account in the <button onClick={() => setTab("users")} className="underline hover:text-amber-200">Users tab</button> to enable it.
+              </p>
+            </div>
           </div>
         )}
 
@@ -746,8 +927,20 @@ export default function AdminPage() {
                                 {u.role}
                               </span>
                             </td>
-                            <td className="px-5 py-3 text-slate-400">
-                              {(u as any).company_name ?? (u.company_slug ? `/${u.company_slug}` : "—")}
+                            <td className="px-5 py-3">
+                              <Select
+                                value={u.company_id ?? ""}
+                                onChange={(e) => handleChangeCompany(u, Number(e.target.value))}
+                                className="!py-1 !px-2 !text-[11px] !rounded-lg min-w-[130px]"
+                                title="Assign this user to a client"
+                              >
+                                {u.company_id === null && (
+                                  <option value="" disabled style={OPTION_STYLE}>— Unassigned —</option>
+                                )}
+                                {companies.map((c) => (
+                                  <option key={c.id} value={c.id} style={OPTION_STYLE}>{c.name}</option>
+                                ))}
+                              </Select>
                             </td>
                             <td className="px-5 py-3">
                               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
@@ -779,6 +972,14 @@ export default function AdminPage() {
                                   }`}
                                 >
                                   {u.is_active !== false ? "Deactivate" : "Activate"}
+                                </button>
+                                <button
+                                  onClick={() => setDeleteUserTarget(u)}
+                                  disabled={u.id === currentUser?.id}
+                                  className="px-2.5 py-1 text-[10px] font-medium text-red-500 hover:text-red-400 border border-red-500/20 hover:border-red-500/40 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                  title={u.id === currentUser?.id ? "You cannot delete your own account" : "Delete this user permanently"}
+                                >
+                                  Delete
                                 </button>
                               </div>
                             </td>
@@ -822,7 +1023,15 @@ export default function AdminPage() {
         <AddUserModal
           companies={companies}
           onClose={() => setShowAddUser(false)}
-          onCreated={() => reloadUsers()}
+          onCreated={() => { reloadUsers(); reloadCompanies(); }}
+        />
+      )}
+
+      {deleteUserTarget && (
+        <DeleteUserDialog
+          user={deleteUserTarget}
+          onClose={() => setDeleteUserTarget(null)}
+          onDeleted={() => { reloadUsers(); reloadCompanies(); setDeleteUserTarget(null); }}
         />
       )}
     </div>

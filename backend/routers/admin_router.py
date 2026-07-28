@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func, desc, or_, update as sql_update, delete as sql_delete
 from database import get_db
 import models, schemas
 from auth import get_current_user, require_admin, hash_password
@@ -134,6 +134,14 @@ async def update_user(
     if body.name is not None:
         user.name = body.name
 
+    if body.company_id is not None:
+        company = await db.execute(
+            select(models.Company).where(models.Company.id == body.company_id)
+        )
+        if not company.scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Company not found")
+        user.company_id = body.company_id
+
     await db.commit()
     await db.refresh(user)
 
@@ -176,6 +184,63 @@ async def deactivate_user(
     user.is_active = False
     await db.commit()
     return {"ok": True}
+
+
+@router.delete("/users/{user_id}/permanent")
+async def delete_user_permanently(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: models.User = Depends(require_admin),
+):
+    """Hard-delete a user account.
+
+    Analyses belong to the company rather than the individual who ran them, so
+    they are transferred to the deleting admin instead of being destroyed —
+    every history view is scoped by company_id, so nothing changes on screen.
+    AI conversations are personal, so those are removed with the account.
+    """
+    if user_id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+
+    result = await db.execute(select(models.User).where(models.User.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    analyses_moved = (
+        await db.execute(
+            select(func.count(models.Analysis.id)).where(models.Analysis.user_id == user_id)
+        )
+    ).scalar_one()
+    await db.execute(
+        sql_update(models.Analysis)
+        .where(models.Analysis.user_id == user_id)
+        .values(user_id=admin.id)
+    )
+
+    # Bulk-delete conversations and messages: an ORM cascade would need the
+    # relationship lazy-loaded, which isn't available on an async session.
+    conv_ids = (
+        await db.execute(
+            select(models.AIConversation.id).where(models.AIConversation.user_id == user_id)
+        )
+    ).scalars().all()
+    if conv_ids:
+        await db.execute(
+            sql_delete(models.AIMessage).where(models.AIMessage.conversation_id.in_(conv_ids))
+        )
+        await db.execute(
+            sql_delete(models.AIConversation).where(models.AIConversation.id.in_(conv_ids))
+        )
+
+    await db.delete(user)
+    await db.commit()
+
+    return {
+        "ok": True,
+        "analyses_transferred": analyses_moved,
+        "conversations_deleted": len(conv_ids),
+    }
 
 
 # ── Company endpoints ─────────────────────────────────────────────────────────
@@ -287,21 +352,39 @@ async def delete_company(
     if admin.company_id == company_id:
         raise HTTPException(status_code=400, detail="Cannot delete your own company")
 
-    # Manual cascade: delete analyses first, then users, then company
-    analyses_result = await db.execute(
-        select(models.Analysis).where(models.Analysis.company_id == company_id)
-    )
-    analyses = analyses_result.scalars().all()
-    for a in analyses:
-        await db.delete(a)
+    # Manual cascade, innermost first: messages → conversations → analyses →
+    # users → company. Bulk statements are used because an ORM cascade would
+    # need each relationship lazy-loaded, which an async session can't do.
+    user_ids = (
+        await db.execute(select(models.User.id).where(models.User.company_id == company_id))
+    ).scalars().all()
+    analysis_ids = (
+        await db.execute(
+            select(models.Analysis.id).where(models.Analysis.company_id == company_id)
+        )
+    ).scalars().all()
 
-    users_result = await db.execute(
-        select(models.User).where(models.User.company_id == company_id)
-    )
-    users = users_result.scalars().all()
-    for u in users:
-        await db.delete(u)
+    conv_filters = []
+    if user_ids:
+        conv_filters.append(models.AIConversation.user_id.in_(user_ids))
+    if analysis_ids:
+        conv_filters.append(models.AIConversation.analysis_id.in_(analysis_ids))
+    if conv_filters:
+        conv_ids = (
+            await db.execute(select(models.AIConversation.id).where(or_(*conv_filters)))
+        ).scalars().all()
+        if conv_ids:
+            await db.execute(
+                sql_delete(models.AIMessage).where(models.AIMessage.conversation_id.in_(conv_ids))
+            )
+            await db.execute(
+                sql_delete(models.AIConversation).where(models.AIConversation.id.in_(conv_ids))
+            )
 
+    await db.execute(
+        sql_delete(models.Analysis).where(models.Analysis.company_id == company_id)
+    )
+    await db.execute(sql_delete(models.User).where(models.User.company_id == company_id))
     await db.delete(company)
     await db.commit()
 

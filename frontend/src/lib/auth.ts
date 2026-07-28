@@ -58,6 +58,23 @@ export function isLoggedIn(): boolean {
   return Boolean(getToken());
 }
 
+// The cached user carries the company_slug that drives the workspace link, so
+// an admin who reassigns their own company must not have to re-login for it.
+export function updateCachedCompany(companyId: number, companySlug: string): void {
+  if (typeof window === "undefined") return;
+  const user = getUser();
+  if (!user) return;
+  try {
+    localStorage.setItem(
+      USER_KEY,
+      JSON.stringify({ ...user, company_id: companyId, company_slug: companySlug })
+    );
+    logEvent(`updateCachedCompany: -> ${companySlug} (#${companyId})`);
+  } catch (err) {
+    logEvent(`updateCachedCompany: THREW — ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
 export function clearToken(): void {
   if (typeof window === "undefined") return;
   try {

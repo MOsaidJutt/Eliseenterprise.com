@@ -37,6 +37,7 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     role: Optional[str] = None
     name: Optional[str] = None
+    company_id: Optional[int] = None
 
 class UserWithCompany(BaseModel):
     id: int

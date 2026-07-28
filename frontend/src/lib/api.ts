@@ -66,18 +66,27 @@ export interface CriticalActivity {
   status: string; pct_complete: string; forecast_end: string;
 }
 
-export interface GanttTask {
-  id: string; code: string; name: string;
-  wbs_id: string; wbs_name: string; wbs_path: string; wbs_level: number;
-  planned_start: string; planned_finish: string;
-  actual_start: string; actual_finish: string;
-  early_start: string; early_finish: string;
-  status: string; pct_complete: number;
-  is_critical: boolean; total_float_days: number; duration_days: number;
+export interface GanttWbsRow {
+  type: "wbs";
+  id: string; parent_id: string | null;
+  name: string; depth: number;
+  rollup_start: string; rollup_end: string; rollup_count: number;
 }
 
+export interface GanttTaskRow {
+  type: "task";
+  id: string; parent_id: string;
+  code: string; name: string; depth: number;
+  start: string; end: string;
+  baseline_start: string; baseline_end: string;
+  status: string; pct: number;
+  is_mile: boolean; critical: boolean; float: number; duration_days: number;
+}
+
+export type GanttRow = GanttWbsRow | GanttTaskRow;
+
 export interface GanttData {
-  tasks: GanttTask[]; project_start: string; project_end: string; data_date: string;
+  rows: GanttRow[]; project_start: string; project_end: string; data_date: string;
 }
 
 export interface AnalysisResult {
@@ -296,10 +305,20 @@ export async function createAdminUser(data: { email: string; password: string; n
   return apiCall("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
 }
 
-export async function updateAdminUser(id: number, data: { is_active?: boolean; role?: string; name?: string }): Promise<AdminUser> {
+export async function updateAdminUser(
+  id: number,
+  data: { is_active?: boolean; role?: string; name?: string; company_id?: number }
+): Promise<AdminUser> {
   return apiCall(`/api/admin/users/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
 }
 
 export async function deactivateAdminUser(id: number): Promise<void> {
   await apiCall(`/api/admin/users/${id}`, { method: "DELETE" });
+}
+
+/** Hard-delete: removes the account, transferring its analyses to the acting admin. */
+export async function deleteAdminUserPermanently(
+  id: number
+): Promise<{ ok: boolean; analyses_transferred: number; conversations_deleted: number }> {
+  return apiCall(`/api/admin/users/${id}/permanent`, { method: "DELETE" });
 }
