@@ -252,7 +252,7 @@ function DashboardInner() {
           <section id="observations"><ObservationsPanel observations={result.observations} /></section>
           <section id="scurve" className="print-break"><SCurve data={result.scurve} /></section>
 
-          {result.gantt && result.gantt.tasks.length > 0 && (
+          {result.gantt && result.gantt.rows.length > 0 && (
             <section id="gantt" className="print-break">
               <GanttChart data={result.gantt} />
             </section>

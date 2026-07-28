@@ -576,37 +576,75 @@ def compute_observations(kpis: dict, ppc_rows: list, float_erosion: list) -> lis
 # ── 9. Gantt Chart ───────────────────────────────────────────────────────────
 
 def compute_gantt(xer: XerData) -> dict:
-    """Returns task data structured for the collapsible WBS Gantt chart (max 300 tasks)."""
+    """Returns the full WBS hierarchy (every node, with per-level rollups) plus every
+    task attached to its leaf WBS node — feeds the collapsible Summary Gantt tree."""
     wbs_map = {w["wbs_id"]: w for w in xer.wbs}
 
-    def _wbs_info(wbs_id: str) -> tuple[str, str, int]:
-        w = wbs_map.get(wbs_id, {})
-        name = w.get("wbs_name", "")
-        short = w.get("wbs_short_name", wbs_id)
-        # Count depth by walking parent chain
-        level = 0
-        pid = wbs_id
-        visited = set()
-        while pid and pid in wbs_map and pid not in visited:
+    def _seq(wbs_id: str) -> int:
+        try:
+            return int(wbs_map[wbs_id].get("seq_num") or 0)
+        except (ValueError, TypeError):
+            return 0
+
+    def _wbs_parent(wbs_id: str) -> str | None:
+        w = wbs_map.get(wbs_id)
+        if not w:
+            return None
+        parent = w.get("parent_wbs_id", "")
+        if not parent or parent == wbs_id or parent not in wbs_map:
+            return None
+        return parent
+
+    def _wbs_depth(wbs_id: str) -> int:
+        depth, pid, visited = 0, _wbs_parent(wbs_id), {wbs_id}
+        while pid and pid not in visited:
             visited.add(pid)
-            parent = wbs_map[pid].get("parent_wbs_id", "")
-            if not parent or parent == pid:
-                break
-            pid = parent
-            level += 1
-        return short, name, min(level, 6)
+            depth += 1
+            pid = _wbs_parent(pid)
+        return depth
+
+    wbs_rows = {
+        wbs_id: {
+            "type": "wbs",
+            "id": f"w{wbs_id}",
+            "parent_id": (f"w{_wbs_parent(wbs_id)}" if _wbs_parent(wbs_id) else None),
+            "name": w.get("wbs_name") or w.get("wbs_short_name") or wbs_id,
+            "depth": _wbs_depth(wbs_id),
+            "_rollup_start": None,
+            "_rollup_end": None,
+            "rollup_count": 0,
+        }
+        for wbs_id, w in wbs_map.items()
+    }
+
+    wbs_children: dict[str, list[str]] = defaultdict(list)
+    for wbs_id in wbs_map:
+        pid = _wbs_parent(wbs_id)
+        if pid:
+            wbs_children[pid].append(wbs_id)
+    for kids in wbs_children.values():
+        kids.sort(key=lambda wid: (_seq(wid), wbs_map[wid].get("wbs_short_name", "")))
+
+    def _bump_rollup(wbs_id: str, start: datetime | None, end: datetime | None):
+        pid, visited = wbs_id, set()
+        while pid and pid not in visited and pid in wbs_rows:
+            visited.add(pid)
+            row = wbs_rows[pid]
+            row["rollup_count"] += 1
+            if start and (row["_rollup_start"] is None or start < row["_rollup_start"]):
+                row["_rollup_start"] = start
+            if end and (row["_rollup_end"] is None or end > row["_rollup_end"]):
+                row["_rollup_end"] = end
+            pid = _wbs_parent(pid)
 
     tasks = [t for t in xer.tasks if t.get("task_type") not in ("TT_LOE", "TT_WBS")]
-    tasks.sort(key=lambda t: (
-        t.get("wbs_id", ""),
-        t.get("early_start_date", "") or t.get("target_start_date", "") or "",
-    ))
+    wbs_tasks: dict[str, list[dict]] = defaultdict(list)
+    all_dates: list[datetime] = []
 
-    all_dates = []
-    rows = []
-    for t in tasks[:300]:
+    for t in tasks:
         wbs_id = t.get("wbs_id", "")
-        wbs_path, wbs_name, wbs_level = _wbs_info(wbs_id)
+        if wbs_id not in wbs_rows:
+            continue
 
         ps = _parse_date(t.get("target_start_date", ""))
         pf = _parse_date(t.get("target_end_date", ""))
@@ -615,38 +653,67 @@ def compute_gantt(xer: XerData) -> dict:
         es = _parse_date(t.get("early_start_date", "") or t.get("restart_date", ""))
         ef = _parse_date(t.get("early_end_date", "") or t.get("reend_date", ""))
 
-        for d in [ps, pf, as_, af, es, ef]:
+        start = as_ or es or ps
+        end = af or ef or pf
+        for d in (ps, pf, as_, af, es, ef):
             if d:
                 all_dates.append(d)
 
         dur = float(t.get("target_drtn_hr_cnt", 0) or 0) / 8
 
-        rows.append({
+        wbs_tasks[wbs_id].append({
+            "type": "task",
             "id": t.get("task_id", ""),
+            "parent_id": f"w{wbs_id}",
             "code": t.get("task_code", ""),
             "name": t.get("task_name", ""),
-            "wbs_id": wbs_id,
-            "wbs_name": wbs_name,
-            "wbs_path": wbs_path,
-            "wbs_level": wbs_level,
-            "planned_start": _fmt_iso(ps),
-            "planned_finish": _fmt_iso(pf),
-            "actual_start": _fmt_iso(as_),
-            "actual_finish": _fmt_iso(af),
-            "early_start": _fmt_iso(es),
-            "early_finish": _fmt_iso(ef),
+            "depth": wbs_rows[wbs_id]["depth"] + 1,
+            "start": _fmt_iso(start),
+            "end": _fmt_iso(end),
+            "baseline_start": _fmt_iso(ps),
+            "baseline_end": _fmt_iso(pf),
             "status": t.get("status_code", ""),
-            "pct_complete": float(t.get("phys_complete_pct", 0) or 0),
-            "is_critical": _is_critical(t),
-            "total_float_days": round(_total_float_days(t), 1),
+            "pct": float(t.get("phys_complete_pct", 0) or 0),
+            "is_mile": t.get("task_type") == "TT_Mile",
+            "critical": _is_critical(t),
+            "float": round(_total_float_days(t), 1),
             "duration_days": round(dur, 0),
         })
+        _bump_rollup(wbs_id, start, end)
+
+    for kids in wbs_tasks.values():
+        kids.sort(key=lambda r: r["start"] or "")
+
+    rows: list[dict] = []
+
+    def _emit(wbs_id: str):
+        row = wbs_rows[wbs_id]
+        rows.append({
+            "type": "wbs",
+            "id": row["id"],
+            "parent_id": row["parent_id"],
+            "name": row["name"],
+            "depth": row["depth"],
+            "rollup_start": _fmt_iso(row["_rollup_start"]),
+            "rollup_end": _fmt_iso(row["_rollup_end"]),
+            "rollup_count": row["rollup_count"],
+        })
+        for child in wbs_children.get(wbs_id, []):
+            _emit(child)
+        rows.extend(wbs_tasks.get(wbs_id, []))
+
+    roots = sorted(
+        (wbs_id for wbs_id in wbs_map if _wbs_parent(wbs_id) is None),
+        key=lambda wid: (_seq(wid), wbs_map[wid].get("wbs_short_name", "")),
+    )
+    for root in roots:
+        _emit(root)
 
     proj_start = _fmt_iso(min(all_dates)) if all_dates else ""
     proj_end = _fmt_iso(max(all_dates)) if all_dates else ""
 
     return {
-        "tasks": rows,
+        "rows": rows,
         "project_start": proj_start,
         "project_end": proj_end,
         "data_date": xer.data_date,

@@ -269,7 +269,7 @@ function AnalysisDashboardInner() {
           <section id="kpi"><KPISummary kpis={result.kpis} /></section>
           <section id="observations"><ObservationsPanel observations={result.observations} /></section>
           <section id="scurve"><SCurve data={result.scurve} /></section>
-          {result.gantt && result.gantt.tasks.length > 0 && (
+          {result.gantt && result.gantt.rows.length > 0 && (
             <section id="gantt"><GanttChart data={result.gantt} /></section>
           )}
           <section id="performance">
