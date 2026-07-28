@@ -28,7 +28,10 @@ async def chat(
     # Load analysis data
     context_str = ""
     if body.analysis_id:
-        q = select(models.Analysis).where(models.Analysis.id == body.analysis_id)
+        q = select(models.Analysis).where(
+            models.Analysis.id == body.analysis_id,
+            models.Analysis.company_id == user.company_id,
+        )
         res = await db.execute(q)
         analysis = res.scalar_one_or_none()
         if analysis and analysis.result:
