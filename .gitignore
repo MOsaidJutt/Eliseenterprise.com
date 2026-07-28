@@ -3,11 +3,14 @@ frontend/node_modules/
 frontend/.next/
 frontend/.env.local
 frontend/out/
+frontend/tsconfig.tsbuildinfo
 
 # Python
-backend/__pycache__/
-backend/*.pyc
-backend/*.pyo
+# Nested too: the old backend/__pycache__/ missed backend/routers/__pycache__/,
+# so compiled bytecode was being tracked and showed up in every diff.
+**/__pycache__/
+**/*.pyc
+**/*.pyo
 backend/venv/
 backend/.venv/
 backend/counter.json
