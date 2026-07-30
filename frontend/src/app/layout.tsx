@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import PWARegister from "@/components/PWARegister";
-import DebugOverlay from "@/components/DebugOverlay";
 
 export const metadata: Metadata = {
   title: "PlainView — Schedule Analytics",
@@ -40,7 +39,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="antialiased">
         <PWARegister />
         {children}
-        <DebugOverlay />
       </body>
     </html>
   );
